@@ -1,0 +1,28 @@
+// Only goes North
+
+GWENDOLEN
+
+:name: car
+
+:Initial Beliefs:
+
+at(0,0)
+destination(0,5)
+
+:Reasoning Rules:
+
+arrived(X,Y) :- destination(X,Y), at(X,Y);
+go_to_destination :- arrived(X,Y);
+
+:Initial Goals:
+
+go_to_destination [achieve]
+
+:Plans:
+
++!go_to_destination [achieve] : {~B arrived(X,Y)} <- drive(north), *at(X1,Y2);
+//+!go_to_03 [achieve] : {B at(0,3)} <- print("Car is at position 0_3");
+
++at(X,Y) : {B arrived(X,Y)} <- honk;
+
++noisy : {True} <- print(honkagain);

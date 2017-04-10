@@ -1,0 +1,44 @@
+GWENDOLEN
+
+:name: car
+
+:Initial Beliefs:
+
+destination(2,1)
+
+:Reasoning Rules:
+
+arrived(X,Y) :- destination(X,Y), at(X,Y);
+go_to_destination :- arrived(X,Y);
+
+coordinates(A_X,A_Y,D_X,D_Y) :- at(A_X,A_Y), destination(D_X,D_Y);
+
+:Initial Goals:
+
+go_to_destination [achieve]
+
+:Plans:
+
++!go_to_destination [achieve] : {~B moving} <- *moving;
++!go_to_destination [achieve] : {~B arrived(AR_X,AR_Y), B moving, B coordinates(A_X,A_Y,D_X,D_Y), A_X < D_X} <- drive(east), -moving;
++!go_to_destination [achieve] : {~B arrived(AR_X,AR_Y), B moving, B coordinates(A_X,A_Y,D_X,D_Y), A_Y < D_Y} <- drive(north), -moving;
+
+//+!go_to_destination [achieve] : {~B arrived(AR_X,AR_Y)} <- drive(east), *at(X,Y);
+
+
+//+!decide_direction[perform] : {B at(A_X,A_Y), B destination(D_X,D_Y), A_X < D_X} <- drive(east);
+//+!decide_direction[perform] : {B at(A_X,A_Y), B destination(D_X,D_Y), A_Y < D_Y} <- drive(north);
+
+
++at(X,Y) : {B arrived(X,Y)} <- honk;
++at(X,Y) : {True} <- +moving;
+
+
+
+//+!go_to_03 [achieve] : {B at(0,3)} <- print("Car is at position 0_3");
+//+noisy : {True} <- print(honkagain);
+
+//+!decide_direction[perform] : {B at(A_X,A_Y), B destination(D_X,D_Y), A_Y < D_Y} <- drive(north);
+//+!decide_direction[perform] : {B at(A_X,A_Y), B destination(D_X,D_Y), D_Y < A_Y} <- drive(south);
+//+!decide_direction[perform] : {B at(A_X,A_Y), B destination(D_X,D_Y), A_X < D_X} <- drive(east);
+//+!decide_direction[perform] : {B at(A_X,A_Y), B destination(D_X,D_Y), D_X < A_X} <- drive(west);

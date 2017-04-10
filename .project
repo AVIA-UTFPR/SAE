@@ -14,4 +14,10 @@
 	<natures>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
+	<variableList>
+		<variable>
+			<name>AJPF_2015</name>
+			<value>file:/Users/lfernandes/Dropbox/tcc/dev/autonomous_car</value>
+		</variable>
+	</variableList>
 </projectDescription>

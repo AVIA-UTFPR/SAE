@@ -1,0 +1,20 @@
+GWENDOLEN
+
+:name: car
+
+:Initial Beliefs:
+
+at(0,0)
+
+:Initial Goals:
+
+go_to_03 [perform]
+
+:Plans:
+
++!go_to_03 [perform] : {~B at(0,3)} <- north, *at(X,Y), +!go_to_03 [perform];
++!go_to_03 [perform] : {B at(0,3)} <- print("Car is at position 0_3");
+
++at(0,3) : {True} <- honk;
+
++noisy : {True} <- print(honkagain);
