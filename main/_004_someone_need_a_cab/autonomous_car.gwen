@@ -4,24 +4,26 @@ GWENDOLEN
 
 :Initial Beliefs:
 
-at(0,0)
-destination(5,5)
-
+//at(0,0)
+//destination(5,5)
 
 :Reasoning Rules:
 
 arrived(X,Y) :- destination(X,Y), at(X,Y);
+finish_ride :- arrived(X,Y);
 go_to_destination :- arrived(X,Y);
 
 position_grid(AT_X, AT_Y,D_X, D_Y) :- at(AT_X, AT_Y), destination(D_X, D_Y);
 
 :Initial Goals:
 
-go_to_destination [achieve]
+finish_ride [achieve]
 
 :Plans:
 
++!finish_ride [achieve] : {True} <- init_gps, +!go_to_destination [achieve];
 
++!go_to_destination [achieve] : {~B destination(X,Y)} <- get_ride_drop_off, *destination(X1,Y1);
 
 +!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B going_north,
 									B position_grid(AT_X, Y, D_X, Y), AT_X < D_X} 
@@ -53,9 +55,13 @@ go_to_destination [achieve]
 								<- +going_south;
 
 
+
+
 +at(X,Y) : {B arrived(X,Y)} <- honk, park;
 
-+at(X,Y) : {True} <- print("new position");
++at(X,Y) : {True};
 -at(X,Y) : {True};
+
++destination(X,Y) : {True}; 
 
 +noisy : {True} <- honk;

@@ -1,4 +1,4 @@
-package _003_first_destination;
+package _004_someone_need_a_cab;
 
 import ail.mas.DefaultEnvironment;
 import ail.mas.MAS;
@@ -90,13 +90,38 @@ public class AutonomousCarEnv extends DefaultEnvironment{
 			moveCar(agName, act, direction.getFunctor());
 			
 		}
+		else if(act.getFunctor().equals("get_ride_drop_off")) {
+			
+			int x = 0, y = 4;
+			
+			System.err.println("Going to: (" + x + "|" + y + ")");
+			
+			Predicate destination = new Predicate("destination");
+			destination.addTerm(new NumberTermImpl(x));
+			destination.addTerm(new NumberTermImpl(y));
+			
+			//System.err.println(destination);
+			
+			addPercept(agName, destination); 
+		}
+		else if(act.getFunctor().equals("init_gps")) {
+			
+			car_x = 10;
+			car_y = 10;
+			
+			Predicate at = new Predicate("at");
+			at.addTerm(new NumberTermImpl(car_x));
+			at.addTerm(new NumberTermImpl(car_y));
+			
+			addPercept(agName, at); 
+		}
 		else if(act.getFunctor().equals("honk")) {
 			
 			System.err.println("HONK");
 			
 			Predicate noisy = new Predicate("noisy");
 			
-			addPercept(agName, noisy); //inform new position to the agent
+			addPercept(agName, noisy);
 		}
 		
 		super.executeAction(agName, act);

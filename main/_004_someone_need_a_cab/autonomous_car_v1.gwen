@@ -5,8 +5,7 @@ GWENDOLEN
 :Initial Beliefs:
 
 at(0,0)
-destination(5,5)
-
+//destination(5,5)
 
 :Reasoning Rules:
 
@@ -21,7 +20,7 @@ go_to_destination [achieve]
 
 :Plans:
 
-
++!go_to_destination [achieve] : {~B destination(X,Y)} <- get_ride_drop_off, *destination(X1,Y1);
 
 +!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B going_north,
 									B position_grid(AT_X, Y, D_X, Y), AT_X < D_X} 
@@ -53,9 +52,13 @@ go_to_destination [achieve]
 								<- +going_south;
 
 
+
+
 +at(X,Y) : {B arrived(X,Y)} <- honk, park;
 
 +at(X,Y) : {True} <- print("new position");
 -at(X,Y) : {True};
+
++destination(X,Y) : {True} <- print(oi); 
 
 +noisy : {True} <- honk;

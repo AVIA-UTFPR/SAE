@@ -1,0 +1,4 @@
+1: <> B(car, arrived(_,_)) -> <> ItD(car, honk)
+
+
+2: G(car, go_to_destination) -> <> B(car, arrived(_,_))
