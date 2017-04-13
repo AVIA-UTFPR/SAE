@@ -1,0 +1,37 @@
+GWENDOLEN
+
+:name: car
+
+:Initial Beliefs:
+
+at(0,0)
+destination(100,100) // Always North-East from starting point
+
+going_north // Default
+
+:Reasoning Rules:
+
+arrived(X,Y) :- destination(X,Y), at(X,Y);
+go_to_destination :- arrived(X,Y);
+
+:Initial Goals:
+
+go_to_destination [achieve]
+
+:Plans:
+
++!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B at(AT_X, AT_Y), B destination(D_X, D_Y), AT_Y == D_Y, ~B going_east} 
+								<- print("turn"), -going_north, +going_east;
+								
++!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B going_north} 
+								<- print("drove north"), drive(north), *at(X,Y);
+								
++!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B going_east} 
+								<- print("drove east"), drive(east), *at(X,Y);	
+															
+
+
++at(X,Y) : {B arrived(X,Y)} <- honk;
+
++at(X,Y) : {True} <- print("new position");
+-at(X,Y) : {True} <- print("forgot position");

@@ -2,4 +2,4 @@
 
 target = ail.util.AJPF_w_AIL
 
-target.args = ${mcapl}/main/_003_first_destination/autonomous_car.ail,${mcapl}/main/_003_first_destination/autonomous_car.psl,2
+target.args = ${mcapl}/main/_003_first_destination/autonomous_car.ail,${mcapl}/main/_003_first_destination/autonomous_car.psl,4

@@ -2,3 +2,7 @@
 
 
 2: G(car, go_to_destination) -> <> B(car, arrived(_,_))
+
+3: B(car, going_north) -> <> ItD(car, drive(north))
+
+4: [] B(car, destination(5,5))
