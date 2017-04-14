@@ -128,16 +128,17 @@ public class AutonomousCarEnv extends DefaultEnvironment{
 			addPercept(agName, destination); 
 		}
 		else if(act.getFunctor().equals("init_gps")) {
-			
+
+			car_x = 10;
+			car_y = 10;
 			
 			Predicate at = new Predicate("at");
 			at.addTerm(new NumberTermImpl(car_x));
 			at.addTerm(new NumberTermImpl(car_y));
-			
 
 			System.err.println("Initializing GPS");
 			System.err.println("Agent " + agName + " is " + at);
-			
+
 			addPercept(agName, at); 
 		}
 		else if(act.getFunctor().equals("honk")) {

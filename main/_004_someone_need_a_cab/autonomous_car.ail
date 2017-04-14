@@ -5,4 +5,3 @@ env = _004_someone_need_a_cab.AutonomousCarEnv
 
 log.warning = ail.mas.DefaultEnvironment
 //log.info = ail.mas.DefaultEnvironment
-1
