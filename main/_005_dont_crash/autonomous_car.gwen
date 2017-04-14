@@ -20,10 +20,12 @@ finish_all_rides [achieve]
 
 :Plans:
 
+// Get location of the car in the environment
++!finish_all_rides [achieve] : {~B at(X,Y)} <- init_gps, *at(GPS_X, GPS_Y);
+
 // If no passengers is available, car goes back to depot
 +!finish_all_rides [achieve] : {B no_possible_new_ride, B depot(X,Y)} <- +!complete_journey (X, Y) [perform], +done_all_rides;
 
-+!finish_all_rides [achieve] : {~B at(X,Y)} <- init_gps, *at(GPS_X, GPS_Y);
 // get new ride
 +!finish_all_rides [achieve] : {~B ride_info} <- get_ride, *ride_info;
 
@@ -33,25 +35,16 @@ finish_all_rides [achieve]
 									+!complete_journey (DP_X, DP_Y) [perform], park,
 									-ride_info;
 
-// Make any jorney
+// Make any journey
 +!complete_journey (X,Y) [perform] : {True} <- +destination(X,Y), +!drive_to(X, Y) [achieve], -destination(X, Y), +!clear_last_travel_data [perform];
 
 +!clear_last_travel_data [perform] : {True} <- -going_north, -going_south, -going_east, -going_west;
 
-
-+!drive_to(X,Y) [achieve] : {B going_north, B position_grid(AT_X, S_Y, D_X, S_Y), AT_X < D_X} 
-								<- -going_north, +going_east; // north to east
-								
-+!drive_to(X,Y) [achieve] : {B going_north, B position_grid(AT_X, S_Y, D_X, S_Y), D_X < AT_X} 
-								<- -going_north, +going_west; // north to west 
-
-+!drive_to(X,Y) [achieve] : { B going_south, B position_grid(AT_X, S_Y, D_X, S_Y), AT_X < D_X} 
-								<- -going_south, +going_east; // south to east
-								
-+!drive_to(X,Y) [achieve] : {B going_south, B position_grid(AT_X, S_Y, D_X, S_Y), D_X < AT_X} 
-								<- -going_south, +going_west; // south to west 
-								
-								
+// If car needs to turn
++!drive_to(X,Y) [achieve] : {B going_north, B position_grid(AT_X, S_Y, D_X, S_Y), AT_X < D_X}  <- -going_north, +going_east; // north to east
++!drive_to(X,Y) [achieve] : {B going_north, B position_grid(AT_X, S_Y, D_X, S_Y), D_X < AT_X}  <- -going_north, +going_west; // north to west 
++!drive_to(X,Y) [achieve] : {B going_south, B position_grid(AT_X, S_Y, D_X, S_Y), AT_X < D_X}  <- -going_south, +going_east; // south to east
++!drive_to(X,Y) [achieve] : {B going_south, B position_grid(AT_X, S_Y, D_X, S_Y), D_X < AT_X}  <- -going_south, +going_west; // south to west 					
 								
 +!drive_to(X,Y) [achieve] : {B going_north} <- drive(north), *at(AT_X, AT_Y);
 +!drive_to(X,Y) [achieve] : {B going_south} <- drive(south), *at(AT_X, AT_Y);
@@ -59,20 +52,13 @@ finish_all_rides [achieve]
 +!drive_to(X,Y) [achieve] : {B going_west}  <- drive(west),  *at(AT_X, AT_Y);
 
 // Choose first direction to go
-+!drive_to(X,Y) [achieve] : {B position_grid(AT_X, AT_Y, D_X, D_Y), AT_Y < D_Y} 
-								<- +going_north;
-								
-+!drive_to(X,Y) [achieve] : {B position_grid(AT_X, AT_Y, D_X, D_Y), D_Y < AT_Y} 
-								<- +going_south;
-								
-+!drive_to(X,Y) [achieve] : {B position_grid(AT_X, S_Y, D_X, S_Y), AT_X < D_X} 
-								<- +going_east;
-								
-+!drive_to(X,Y) [achieve] : {B position_grid(AT_X, S_Y, D_X, S_Y), D_X < AT_X} 
-								<- +going_west;
++!drive_to(X,Y) [achieve] : {B position_grid(AT_X, AT_Y, D_X, D_Y), AT_Y < D_Y} <- +going_north;
++!drive_to(X,Y) [achieve] : {B position_grid(AT_X, AT_Y, D_X, D_Y), D_Y < AT_Y} <- +going_south;
++!drive_to(X,Y) [achieve] : {B position_grid(AT_X, S_Y, D_X, S_Y), AT_X < D_X}  <- +going_east;
++!drive_to(X,Y) [achieve] : {B position_grid(AT_X, S_Y, D_X, S_Y), D_X < AT_X}  <- +going_west;
 
 
-+at(X,Y) : {B arrived(X,Y)};
++at(X,Y) : {B arrived(X,Y)} -> honk;
 
 +at(X,Y) : {True};
 -at(X,Y) : {True};

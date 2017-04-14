@@ -10,34 +10,25 @@ depot(0,0)
 
 arrived(X,Y) :- destination(X,Y), at(X,Y);
 drive_to(X,Y) :- arrived(X,Y);
-finish_all_rides :- done_all_rides;
+finish_ride :- no_rides;
 
 position_grid(AT_X, AT_Y,D_X, D_Y) :- at(AT_X, AT_Y), destination(D_X, D_Y);
 
 :Initial Goals:
 
-finish_all_rides [achieve]
+finish_ride [achieve]
 
 :Plans:
 
-// If no passengers is available, car goes back to depot
-+!finish_all_rides [achieve] : {B no_possible_new_ride, B depot(X,Y)} <- +!complete_journey (X, Y) [perform], +done_all_rides;
++!finish_ride [achieve] : {True} 
+							<- 	init_gps, get_ride, 
+								*pick_up(PK_X, PK_Y), *drop_off(DP_X,DP_Y),
+								+destination(PK_X,PK_Y), +!drive_to(PK_X,PK_Y) [achieve], -destination(PK_X,PK_Y), print("got passenger"),
+								+!clear_data_direction [perform],
+								+destination(DP_X,DP_Y), +!drive_to(DP_Y,DP_Y) [achieve], -destination(DP_Y,DP_Y), print("completed ride"), +no_rides;
 
-+!finish_all_rides [achieve] : {~B at(X,Y)} <- init_gps, *at(GPS_X, GPS_Y);
-// get new ride
-+!finish_all_rides [achieve] : {~B ride_info} <- get_ride, *ride_info;
 
-// Current ride
-+!finish_all_rides [achieve] : {B pick_up(PK_X, PK_Y), B drop_off(DP_X, DP_Y)}
-								<- 	+!complete_journey (PK_X, PK_Y) [perform], park,
-									+!complete_journey (DP_X, DP_Y) [perform], park,
-									-ride_info;
-
-// Make any jorney
-+!complete_journey (X,Y) [perform] : {True} <- +destination(X,Y), +!drive_to(X, Y) [achieve], -destination(X, Y), +!clear_last_travel_data [perform];
-
-+!clear_last_travel_data [perform] : {True} <- -going_north, -going_south, -going_east, -going_west;
-
++!clear_data_direction [perform] : {True} <- -going_north, -going_south, -going_east, -going_west;
 
 +!drive_to(X,Y) [achieve] : {B going_north, B position_grid(AT_X, S_Y, D_X, S_Y), AT_X < D_X} 
 								<- -going_north, +going_east; // north to east
@@ -72,11 +63,11 @@ finish_all_rides [achieve]
 								<- +going_west;
 
 
-+at(X,Y) : {B arrived(X,Y)};
++at(X,Y) : {B arrived(X,Y)} <- honk, park;
 
 +at(X,Y) : {True};
 -at(X,Y) : {True};
 
 +destination(X,Y) : {True}; 
 
-+noisy : {True};
++noisy : {True} <- honk;

@@ -1,4 +1,4 @@
-package _004_someone_need_a_cab;
+package _005_dont_crash;
 
 import java.util.ArrayList;
 
@@ -12,8 +12,6 @@ import ail.syntax.Term;
 import ail.syntax.Unifier;
 import ail.syntax.VarTerm;
 import ail.util.AILexception;
-import ajpf.util.choice.ProbBoolChoice;
-import ajpf.util.choice.UniformBoolChoice;
 import util.Passenger;
 
 public class AutonomousCarEnv extends DefaultEnvironmentwRandomness{
@@ -24,8 +22,8 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness{
 	private int carY = 0;
 
 	// Information about the grid
-	private int maxX = 100;
-	private int maxY = 100;
+	private int maxX = 10;
+	private int maxY = 10;
 
 	// Information about passengers
 	private ArrayList<Passenger> passengers = new ArrayList<Passenger>();
@@ -220,9 +218,8 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness{
 
 			System.err.println("HONK");
 
-			Predicate noisy = new Predicate("noisy");
-
-			addPercept(agName, noisy);
+			//Predicate noisy = new Predicate("noisy");
+			//addPercept(agName, noisy);
 		}
 
 		super.executeAction(agName, act);
