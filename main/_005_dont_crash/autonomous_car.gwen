@@ -1,10 +1,11 @@
 GWENDOLEN
 
-:name: car
+:name: Car001
 
 :Initial Beliefs:
 
-depot(0,0)
+min(0,0)
+
 
 :Reasoning Rules:
 
@@ -12,7 +13,17 @@ arrived(X,Y) :- destination(X,Y), at(X,Y);
 drive_to(X,Y) :- arrived(X,Y);
 finish_all_rides :- done_all_rides;
 
-position_grid(AT_X, AT_Y,D_X, D_Y) :- at(AT_X, AT_Y), destination(D_X, D_Y);
+position_grid(AT_X, AT_Y, D_X, D_Y) :- at(AT_X, AT_Y), destination(D_X, D_Y);
+
+// Route
+//get_route(X,Y) :- receive_direction(X,Y);
+
+// No Emergency in (X,Y)
+control_emergency (X,Y) :- ~crashed(X,Y);
+
+// Avoid obstacles
+avoid_obstacle(D, X, Y) :- ~at(X,Y);
+//adjust_route(D, X, Y) :- ~at(X,Y);
 
 :Initial Goals:
 
@@ -21,48 +32,177 @@ finish_all_rides [achieve]
 :Plans:
 
 // Get location of the car in the environment
-+!finish_all_rides [achieve] : {~B at(X,Y)} <- init_gps, *at(GPS_X, GPS_Y);
++!finish_all_rides [achieve] : {~B at(X,Y)} <- localize, *at(GPS_X, GPS_Y);
 
 // If no passengers is available, car goes back to depot
-+!finish_all_rides [achieve] : {B no_possible_new_ride, B depot(X,Y)} <- +!complete_journey (X, Y) [perform], +done_all_rides;
++!finish_all_rides [achieve] : {B no_possible_new_ride, B depot(X,Y)} <- +!complete_journey (X, Y) [perform], park(depot), +done_all_rides;
 
 // get new ride
 +!finish_all_rides [achieve] : {~B ride_info} <- get_ride, *ride_info;
 
-// Current ride
-+!finish_all_rides [achieve] : {B pick_up(PK_X, PK_Y), B drop_off(DP_X, DP_Y)}
-								<- 	+!complete_journey (PK_X, PK_Y) [perform], park,
-									+!complete_journey (DP_X, DP_Y) [perform], park,
-									-ride_info;
 
-// Make any journey
-+!complete_journey (X,Y) [perform] : {True} <- +destination(X,Y), +!drive_to(X, Y) [achieve], -destination(X, Y), +!clear_last_travel_data [perform];
+// Verify it can reach destinations of the new ride
++!finish_all_rides [achieve] : {B ride_info, B pick_up(X, Y),  ~B verify_journey(X,Y)} 
+								<- +!verify_reach_destination (X,Y) [perform], +verify_journey(X,Y);
 
-+!clear_last_travel_data [perform] : {True} <- -going_north, -going_south, -going_east, -going_west;
-
-// If car needs to turn
-+!drive_to(X,Y) [achieve] : {B going_north, B position_grid(AT_X, S_Y, D_X, S_Y), AT_X < D_X}  <- -going_north, +going_east; // north to east
-+!drive_to(X,Y) [achieve] : {B going_north, B position_grid(AT_X, S_Y, D_X, S_Y), D_X < AT_X}  <- -going_north, +going_west; // north to west 
-+!drive_to(X,Y) [achieve] : {B going_south, B position_grid(AT_X, S_Y, D_X, S_Y), AT_X < D_X}  <- -going_south, +going_east; // south to east
-+!drive_to(X,Y) [achieve] : {B going_south, B position_grid(AT_X, S_Y, D_X, S_Y), D_X < AT_X}  <- -going_south, +going_west; // south to west 					
++!finish_all_rides [achieve] : {B ride_info, B pick_up(X, Y),  B verify_journey(X,Y), ~B possible_journey_to(X,Y)} 
+								<- refuse_ride(pick_up), +!clear_current_ride [perform];
 								
-+!drive_to(X,Y) [achieve] : {B going_north} <- drive(north), *at(AT_X, AT_Y);
-+!drive_to(X,Y) [achieve] : {B going_south} <- drive(south), *at(AT_X, AT_Y);
-+!drive_to(X,Y) [achieve] : {B going_east}  <- drive(east),  *at(AT_X, AT_Y);	
-+!drive_to(X,Y) [achieve] : {B going_west}  <- drive(west),  *at(AT_X, AT_Y);
++!finish_all_rides [achieve] : {B ride_info, B drop_off(X, Y), ~B verify_journey(X,Y)} 
+								<- +!verify_reach_destination (X,Y) [perform], +verify_journey(X,Y);
+
++!finish_all_rides [achieve] : {B ride_info, B drop_off(X, Y), B verify_journey(X,Y), ~B possible_journey_to(X,Y)} 
+								<- refuse_ride(drop_off), +!clear_current_ride [perform];
+	
+
+// Current ride - Pick up
++!finish_all_rides [achieve] : {B ride_info, ~B try_pick_up(X,Y), B pick_up(X,Y), ~B passenger}
+								<- +!complete_journey (X,Y) [perform], +try_pick_up(X,Y);	
++!finish_all_rides [achieve] : {B ride_info, B try_pick_up(X,Y), B at(X,Y), B pick_up(X,Y), ~B passenger}
+								<- park(pick_up), +passenger, -pick_up(X,Y), -try_pick_up(X,Y);	
+								
++!finish_all_rides [achieve] : {B ride_info, B try_pick_up(X,Y), ~B at(X, Y), B pick_up(X,Y), ~B passenger}
+								<- refuse_ride(pick_up), -pick_up(X,Y), -try_pick_up(X,Y), -ride_info;	
+								
+								
+// Current ride - Drop off		
++!finish_all_rides [achieve] : {B ride_info, ~B try_drop_off(X,Y), B drop_off(X,Y), B passenger}
+								<- 	+!complete_journey (X,Y) [perform], +try_drop_off(X,Y);
++!finish_all_rides [achieve] : {B ride_info, B try_drop_off(X,Y), B at(X,Y), B drop_off(X,Y), B passenger}
+								<- 	park(drop_off), -passenger, -drop_off(X,Y), -try_drop_off(X,Y), -ride_info;
+
++!finish_all_rides [achieve] : {B ride_info, B try_drop_off(X,Y), ~B at(X, Y), B drop_off(X,Y), B passenger}
+								<- 	refuse_ride(drop_off), park(drop_off), -passenger, -drop_off(X,Y), -try_drop_off(X,Y), -ride_info;							
+																	
+																	
++!clear_current_ride [perform] : {True} <- -pick_up(PK_X,PK_Y), -drop_off(DP_X,DP_Y), -ride_info;
+
+// Verify if can reach destination
++!verify_reach_destination (V_X,V_Y) [perform] : {B min(MIN_X, MIN_Y), V_X < MIN_X}  ;	//print("cant reach destination MIN X")
++!verify_reach_destination (V_X,V_Y) [perform] : {B min(MIN_X, MIN_Y), V_Y < MIN_Y}  ;	//print("cant reach destination MIN Y") 
++!verify_reach_destination (V_X,V_Y) [perform] : {B max(MAX_X, MAX_Y), MAX_X < V_X}  ;	//print("cant reach destination MAX X") 
++!verify_reach_destination (V_X,V_Y) [perform] : {B max(MAX_X, MAX_Y), MAX_Y < V_Y}  ;	//print("cant reach destination MAX Y") 
+
+// if no previous GUARD matched, then the journey is possible 
++!verify_reach_destination (V_X,V_Y) [perform] : {True}  <- +possible_journey_to(V_X,V_Y);
+									
++!complete_journey (X,Y) [perform] : {True} <- 	+!clear_travel_data [perform], 
+												+destination(X,Y),
+												+moving, +!drive_to(X, Y) [achieve], -moving, 
+												-destination(X, Y);
+
++!clear_travel_data [perform] : {True} 
+									<- 	+!clear_direction_data [perform],
+										-heading(north), -heading(south), -heading(east), -heading(west);
+										
++!clear_direction_data [perform] : {True} <- -north, -south, -east, -west, -receive_direction;
+
++!get_route [perform] : {B destination(X,Y)} <- +!clear_travel_data [perform], compass(X, Y), *receive_direction;
 
 // Choose first direction to go
-+!drive_to(X,Y) [achieve] : {B position_grid(AT_X, AT_Y, D_X, D_Y), AT_Y < D_Y} <- +going_north;
-+!drive_to(X,Y) [achieve] : {B position_grid(AT_X, AT_Y, D_X, D_Y), D_Y < AT_Y} <- +going_south;
-+!drive_to(X,Y) [achieve] : {B position_grid(AT_X, S_Y, D_X, S_Y), AT_X < D_X}  <- +going_east;
-+!drive_to(X,Y) [achieve] : {B position_grid(AT_X, S_Y, D_X, S_Y), D_X < AT_X}  <- +going_west;
++!drive_to(X,Y) [achieve] : {~B north, ~B south, ~B east, ~B west} <- +!get_route [perform];
+
+// Decide where the car should head to
++!drive_to(X,Y) [achieve] : {~B heading(H), B north} <- +heading(north);
++!drive_to(X,Y) [achieve] : {~B heading(H), B south} <- +heading(south);
++!drive_to(X,Y) [achieve] : {~B heading(H), B east}  <- +heading(east);
++!drive_to(X,Y) [achieve] : {~B heading(H), B west}  <- +heading(west);
+
+// If car needs to turn
++!drive_to(X,Y) [achieve] : {B heading(north), B at(AT_X, Y), B east}  <- -heading(north), +heading(east); // north to east
++!drive_to(X,Y) [achieve] : {B heading(north), B at(AT_X, Y), B west}  <- -heading(north), +heading(west); // north to west 
+
++!drive_to(X,Y) [achieve] : {B heading(south), B at(AT_X, Y), B east}  <- -heading(south), +heading(east); // south to east
++!drive_to(X,Y) [achieve] : {B heading(south), B at(AT_X, Y), B west}  <- -heading(south), +heading(west); // south to west 
+
++!drive_to(X,Y) [achieve] : {B heading(east), B east, B at(X, AT_Y), B north}  <- message("turn east to north"), -heading(east), +heading(north); // east to north
++!drive_to(X,Y) [achieve] : {B heading(east), B east, B at(X, AT_Y), B south}  <- message("turn east to south"), -heading(east), +heading(south); // east to south
+
++!drive_to(X,Y) [achieve] : {B heading(west), B west, B at(X, AT_Y), B north}  <- message("turn west to north"), -heading(west), +heading(north); // west to north
++!drive_to(X,Y) [achieve] : {B heading(west), B west, B at(X, AT_Y), B south}  <- message("turn west to south"), -heading(west), +heading(south); // west to south	
 
 
-+at(X,Y) : {B arrived(X,Y)} -> honk;
+// If car is blocked, drop the goal
++!drive_to(X,Y) [achieve] : {B blocked} <- -blocked, -!drive_to(X,Y) [achieve];		
+
+// Wait to be in movement to drive
++!drive_to(X,Y) [achieve] : {~B moving} <- *moving;		
+
+// Adjust Route because of dead ends						
++!drive_to(X,Y) [achieve] : {B moving, B heading(D), B at(AT_X, AT_Y), 
+							~B obstacle(D, AT_X, AT_Y), B road_ends_at(D, AT_X, AT_Y), ~B road_ends_at(center, X, Y)} 
+							<- -moving, +!adjust_route(D, AT_X, AT_Y) [achieve];
+
+// Obstacle Avoidance						
++!drive_to(X,Y) [achieve] : {B moving, B heading(D), B at(AT_X, AT_Y), B obstacle(D, AT_X, AT_Y)} 
+							<- -moving, +!avoid_obstacle(D, AT_X, AT_Y) [achieve];
+
+// When the car believes it can just move
++!drive_to(X,Y) [achieve] : {B moving, B heading(D)} <- -moving, drive(D);
+
+// Adjust Route
++!adjust_route(D, X, Y) [achieve] : 	{B at(AT_X, AT_Y), ~B obstacle(D, AT_X, AT_Y), ~B road_ends_at(D, AT_X, AT_Y)} 
+										<- -moving, drive(D), +!get_route [perform], -!adjust_route(D, X, Y) [achieve]; 
+										
++!adjust_route(D, X, Y) [achieve] : 	{B at(AT_X, AT_Y), 
+										~B obstacle(east, AT_X, AT_Y), ~B road_ends_at(east, AT_X, AT_Y)} 
+										<- -moving, drive(east); 
+
++!adjust_route(D, X, Y) [achieve] : {True} <- message(D), print(somethingnotprogramADJUST),  +blocked, -!adjust_route(D, X, Y) [achieve]; 
+
+
+// Obstacle Avoidance	
++!avoid_obstacle(D, X, Y) [achieve] : {B obstacle(north, X, Y), B obstacle(south, X, Y), B obstacle(east, X, Y), B obstacle(west, X, Y)} 
+									  	<- +blocked, -!avoid_obstacle(D, X, Y) [achieve];
+
+// Going North or South, but also believes it's destination is either in east or west
++!avoid_obstacle(D, X, Y) [achieve] : {~B obstacle(east, X, Y), B east, ~B heading(east), ~B heading(west)} 
+									  	<- message("Simple Belief NS to East"), +!drive_and_check_route(east) [perform];	  
++!avoid_obstacle(D, X, Y) [achieve] : {~B obstacle(west, X, Y), B west, ~B heading(east), ~B heading(west)} 
+									  	<- message("Simple Belief NS to West"), +!drive_and_check_route(west) [perform];
+									  
+// Going North or South, and believes destination is only north or south
++!avoid_obstacle(D, X, Y) [achieve] : {~B obstacle(east, X, Y), ~B east, ~B heading(east), ~B heading(west)} 
+								  	  	<- message("Reroute NS to East"), +!drive_and_check_route(east) [perform];
++!avoid_obstacle(D, X, Y) [achieve] : {~B obstacle(west, X, Y), ~B west, ~B heading(east), ~B heading(west)} 
+								  		<- message("Reroute NS to West"), +!drive_and_check_route(west) [perform];
+								  								  		
+// Going East or West, and believes destination is only East or West
++!avoid_obstacle(D, X, Y) [achieve] : {~B obstacle(north, X, Y), ~B heading(north), ~B heading(south)} 
+								  	  	<- message(D), message("Reroute EW to North"), +!drive_and_check_route(north) [perform], +heading(D);
++!avoid_obstacle(D, X, Y) [achieve] : {~B obstacle(south, X, Y), ~B heading(north), ~B heading(south)} 
+								  		<- message(D), message("Reroute EW to South"), +!drive_and_check_route(south) [perform], +heading(D);
+								  		  
+// Going North, and is blocked in east or west. Have to go back.
++!avoid_obstacle(north, X, Y) [achieve] : {~B obstacle(south, X, Y)} 
+								  		<- message("Road ends at North"), drive(south), *at(AT_X, AT_Y), +road_ends_at(center, X, Y), +road_ends_at(north, AT_X, AT_Y);
++!avoid_obstacle(south, X, Y) [achieve] : {~B obstacle(north, X, Y)} 
+								  		<- message("Road ends at North"), drive(north), *at(AT_X, AT_Y), +road_ends_at(center, X, Y), +road_ends_at(south, AT_X, AT_Y);
+
+
++!avoid_obstacle(D, X, Y) [achieve] : {True} 
+									  <- message(D), print(somethingnotprogramedAVOID), drive(D), -moving;
+									  
++!drive_and_check_route(D) [perform] : {True} <- drive(D), *at(AT_X, AT_Y), +!get_route [perform];
+
+//+at(X,Y) : {B road_ends_at(D, X, Y)} <- print(deadend), message(D);
++at(X,Y) : {B obstacle(center, X,Y)} <- -moving, +crashed(X,Y), +!control_emergency (X,Y) [achieve], +moving;
++at(X,Y) : {~B obstacle(center, X,Y)} <- +moving;
 
 +at(X,Y) : {True};
--at(X,Y) : {True};
 
-+destination(X,Y) : {True}; 
 
-+noisy : {True};
+// If Crashed, ask for help
++!control_emergency (X,Y) [achieve] : {B help(X,Y), B alert_state} <-  -help(X,Y), -alert_state, -crashed(X,Y);
++!control_emergency (X,Y) [achieve] : {B crashed(X,Y), ~B alert_state} <- call_emergency(X,Y), *help(X,Y), +alert_state;
+
+
++north : {True} ;
++south : {True} ;
++east : {True} ;
++west : {True} ;
+
+-north : {True} ;
+-south : {True} ;
+-east : {True} ;
+-west : {True} ;
