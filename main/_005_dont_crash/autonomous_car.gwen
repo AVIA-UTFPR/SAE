@@ -16,14 +16,30 @@ finish_all_rides :- done_all_rides;
 position_grid(AT_X, AT_Y, D_X, D_Y) :- at(AT_X, AT_Y), destination(D_X, D_Y);
 
 // Route
-//get_route(X,Y) :- receive_direction(X,Y);
+turn(north, X, Y) :- heading(north), at(AT_X, Y);
+turn(south, X, Y) :- heading(south), at(AT_X, Y);
+
+
+// adapt Route
+can_drive(DIR) :- at(AT_X, AT_Y), ~obstacle(DIR, AT_X, AT_Y), ~road_ends_at(DIR, AT_X, AT_Y), ~no_further(DIR, AT_X, AT_Y);
+
+go(north_south)	:- ~heading(north), ~heading(south), ~adapt(east), ~adapt(west);
+go(east_west) 	:- ~heading(east), ~heading(west), ~adapt(north), ~adapt(south);
+
+
+go(north) :- ~adapt(south), go(north_south);
+go(south) :- ~adapt(north), go(north_south);
+
+go(east) :- ~adapt(west), go(east_west);
+go(west) :- ~adapt(east), go(east_west);
+
 
 // No Emergency in (X,Y)
 control_emergency (X,Y) :- ~crashed(X,Y);
 
 // Avoid obstacles
 avoid_obstacle(D, X, Y) :- ~at(X,Y);
-//adjust_route(D, X, Y) :- ~at(X,Y);
+//adapt_route(D, X, Y) :- ~at(X,Y);
 
 :Initial Goals:
 
@@ -93,7 +109,8 @@ finish_all_rides [achieve]
 
 +!clear_travel_data [perform] : {True} 
 									<- 	+!clear_direction_data [perform],
-										-heading(north), -heading(south), -heading(east), -heading(west);
+										-heading(north), -heading(south), -heading(east), -heading(west),
+										-adapt(north), -adapt(south),  -adapt(east), -adapt(west);
 										
 +!clear_direction_data [perform] : {True} <- -north, -south, -east, -west, -receive_direction;
 
@@ -109,17 +126,17 @@ finish_all_rides [achieve]
 +!drive_to(X,Y) [achieve] : {~B heading(H), B west}  <- +heading(west);
 
 // If car needs to turn
-+!drive_to(X,Y) [achieve] : {B heading(north), B at(AT_X, Y), B east}  <- -heading(north), +heading(east); // north to east
-+!drive_to(X,Y) [achieve] : {B heading(north), B at(AT_X, Y), B west}  <- -heading(north), +heading(west); // north to west 
++!drive_to(X,Y) [achieve] : {B turn(north, X, Y), B east}  <- -heading(north), +heading(east); // north to east
++!drive_to(X,Y) [achieve] : {B turn(north, X, Y), B west}  <- -heading(north), +heading(west); // north to west 
 
-+!drive_to(X,Y) [achieve] : {B heading(south), B at(AT_X, Y), B east}  <- -heading(south), +heading(east); // south to east
-+!drive_to(X,Y) [achieve] : {B heading(south), B at(AT_X, Y), B west}  <- -heading(south), +heading(west); // south to west 
++!drive_to(X,Y) [achieve] : {B turn(south, X, Y), B east}  <- -heading(south), +heading(east); // south to east
++!drive_to(X,Y) [achieve] : {B turn(south, X, Y), B west}  <- -heading(south), +heading(west); // south to west 
 
-+!drive_to(X,Y) [achieve] : {B heading(east), B east, B at(X, AT_Y), B north}  <- message("turn east to north"), -heading(east), +heading(north); // east to north
-+!drive_to(X,Y) [achieve] : {B heading(east), B east, B at(X, AT_Y), B south}  <- message("turn east to south"), -heading(east), +heading(south); // east to south
++!drive_to(X,Y) [achieve] : {B heading(east), B east, B at(X, AT_Y), B north}  <- -heading(east), +heading(north); // east to north
++!drive_to(X,Y) [achieve] : {B heading(east), B east, B at(X, AT_Y), B south}  <- -heading(east), +heading(south); // east to south
 
-+!drive_to(X,Y) [achieve] : {B heading(west), B west, B at(X, AT_Y), B north}  <- message("turn west to north"), -heading(west), +heading(north); // west to north
-+!drive_to(X,Y) [achieve] : {B heading(west), B west, B at(X, AT_Y), B south}  <- message("turn west to south"), -heading(west), +heading(south); // west to south	
++!drive_to(X,Y) [achieve] : {B heading(west), B west, B at(X, AT_Y), B north}  <- -heading(west), +heading(north); // west to north
++!drive_to(X,Y) [achieve] : {B heading(west), B west, B at(X, AT_Y), B south}  <- -heading(west), +heading(south); // west to south	
 
 
 // If car is blocked, drop the goal
@@ -128,81 +145,79 @@ finish_all_rides [achieve]
 // Wait to be in movement to drive
 +!drive_to(X,Y) [achieve] : {~B moving} <- *moving;		
 
-// Adjust Route because of dead ends						
-+!drive_to(X,Y) [achieve] : {B moving, B heading(D), B at(AT_X, AT_Y), 
-							~B obstacle(D, AT_X, AT_Y), B road_ends_at(D, AT_X, AT_Y), ~B road_ends_at(center, X, Y)} 
-							<- -moving, +!adjust_route(D, AT_X, AT_Y) [achieve];
+// adapt Route because of dead ends						
+//+!drive_to(X,Y) [achieve] : {B moving, B heading(D), B at(AT_X, AT_Y), 
+//							~B obstacle(D, AT_X, AT_Y), B road_ends_at(D, AT_X, AT_Y), ~B road_ends_at(center, X, Y)} 
+//							<- -moving, +!adapt_route(D, AT_X, AT_Y) [achieve];
 
 // Obstacle Avoidance						
 +!drive_to(X,Y) [achieve] : {B moving, B heading(D), B at(AT_X, AT_Y), B obstacle(D, AT_X, AT_Y)} 
-							<- -moving, +!avoid_obstacle(D, AT_X, AT_Y) [achieve];
+							<- -moving, +!adapt_route(D, AT_X, AT_Y) [achieve];
 
 // When the car believes it can just move
 +!drive_to(X,Y) [achieve] : {B moving, B heading(D)} <- -moving, drive(D);
 
-// Adjust Route
-+!adjust_route(D, X, Y) [achieve] : 	{B at(AT_X, AT_Y), ~B obstacle(D, AT_X, AT_Y), ~B road_ends_at(D, AT_X, AT_Y)} 
-										<- -moving, drive(D), +!get_route [perform], -!adjust_route(D, X, Y) [achieve]; 
-										
-+!adjust_route(D, X, Y) [achieve] : 	{B at(AT_X, AT_Y), 
-										~B obstacle(east, AT_X, AT_Y), ~B road_ends_at(east, AT_X, AT_Y)} 
-										<- -moving, drive(east); 
 
-+!adjust_route(D, X, Y) [achieve] : {True} <- message(D), print(somethingnotprogramADJUST),  +blocked, -!adjust_route(D, X, Y) [achieve]; 
-
-
-// Obstacle Avoidance	
-+!avoid_obstacle(D, X, Y) [achieve] : {B obstacle(north, X, Y), B obstacle(south, X, Y), B obstacle(east, X, Y), B obstacle(west, X, Y)} 
+// Obstacle Avoidance and adapt Route	
++!adapt_route(D, X, Y) [achieve] : {B obstacle(north, X, Y), B obstacle(south, X, Y), B obstacle(east, X, Y), B obstacle(west, X, Y)} 
 									  	<- +blocked, -!avoid_obstacle(D, X, Y) [achieve];
 
-// Going North or South, but also believes it's destination is either in east or west
-+!avoid_obstacle(D, X, Y) [achieve] : {~B obstacle(east, X, Y), B east, ~B heading(east), ~B heading(west)} 
-									  	<- message("Simple Belief NS to East"), +!drive_and_check_route(east) [perform];	  
-+!avoid_obstacle(D, X, Y) [achieve] : {~B obstacle(west, X, Y), B west, ~B heading(east), ~B heading(west)} 
-									  	<- message("Simple Belief NS to West"), +!drive_and_check_route(west) [perform];
-									  
-// Going North or South, and believes destination is only north or south
-+!avoid_obstacle(D, X, Y) [achieve] : {~B obstacle(east, X, Y), ~B east, ~B heading(east), ~B heading(west)} 
-								  	  	<- message("Reroute NS to East"), +!drive_and_check_route(east) [perform];
-+!avoid_obstacle(D, X, Y) [achieve] : {~B obstacle(west, X, Y), ~B west, ~B heading(east), ~B heading(west)} 
-								  		<- message("Reroute NS to West"), +!drive_and_check_route(west) [perform];
-								  								  		
-// Going East or West, and believes destination is only East or West
-+!avoid_obstacle(D, X, Y) [achieve] : {~B obstacle(north, X, Y), ~B heading(north), ~B heading(south)} 
-								  	  	<- message(D), message("Reroute EW to North"), +!drive_and_check_route(north) [perform], +heading(D);
-+!avoid_obstacle(D, X, Y) [achieve] : {~B obstacle(south, X, Y), ~B heading(north), ~B heading(south)} 
-								  		<- message(D), message("Reroute EW to South"), +!drive_and_check_route(south) [perform], +heading(D);
-								  		  
-// Going North, and is blocked in east or west. Have to go back.
-+!avoid_obstacle(north, X, Y) [achieve] : {~B obstacle(south, X, Y)} 
-								  		<- message("Road ends at North"), drive(south), *at(AT_X, AT_Y), +road_ends_at(center, X, Y), +road_ends_at(north, AT_X, AT_Y);
-+!avoid_obstacle(south, X, Y) [achieve] : {~B obstacle(north, X, Y)} 
-								  		<- message("Road ends at North"), drive(north), *at(AT_X, AT_Y), +road_ends_at(center, X, Y), +road_ends_at(south, AT_X, AT_Y);
+// adapt Route
++!adapt_route(D, X, Y) [achieve] : {B can_drive(D)} 
+									<- 	-moving, print("Fixed Route"),
+										-adapt(north, X, Y), -adapt(south, X, Y),  -adapt(east, X, Y), -adapt(west, X, Y),
+										+!drive_and_check_route(D) [perform], -!adapt_route(D, X, Y) [achieve], -reroute(D, X, Y); 
+										
+// Simple Belief North or South to East or West
++!adapt_route(D, X, Y) [achieve] : {B can_drive(east), B east, B go(east)} <- message("Simple Belief NS to East"), +!adapt_drive(east) [perform]; 
++!adapt_route(D, X, Y) [achieve] : {B can_drive(west), B west, B go(west)} <- message("Simple Belief NS to West"), +!adapt_drive(west) [perform];
+							
+// Reroute North or South to East or West		 						
++!adapt_route(D, X, Y) [achieve] : {B can_drive(east), B go(east)} <- message("Reroute NS to East"), +!adapt_drive(east) [perform]; 
++!adapt_route(D, X, Y) [achieve] : {B can_drive(west), B go(west)} <- message("Reroute NS to West"), +!adapt_drive(west) [perform]; 
+
+//Simple Belief East or West to North or South
++!adapt_route(D, X, Y) [achieve] : {B can_drive(north), B north, B go(north)} <- message("Simple Belief EW to North"), +!adapt_drive(north) [perform]; 
++!adapt_route(D, X, Y) [achieve] : {B can_drive(south), B south, B go(south)} <- message("Simple Belief EW to South"), +!adapt_drive(south) [perform]; 
+									
+//Reroute Belief East or West to North or South
++!adapt_route(D, X, Y) [achieve] : {B can_drive(north), B go(north)} <- message("Reroute EW to North"), +!adapt_drive(north) [perform]; 
++!adapt_route(D, X, Y) [achieve] : {B can_drive(south), B go(south)} <- message("Reroute EW to South"), +!adapt_drive(south) [perform]; 
+
+//Reroute the reroute
++!adapt_route(D, X, Y) [achieve] : {~B can_drive(north), B adapt(north), B at(AT_X, AT_Y)} 
+									<- message("Cant keep going north"), 
+										-adapt(north), 
+										no_further_info(D, AT_X, AT_Y), no_further_info(north, AT_X, AT_Y),
+										-moving, drive(south); 
+									
++!adapt_route(east, X, Y) [achieve] : {~B can_drive(north), ~B can_drive(south), ~B can_drive(east), B can_drive(west), B at(AT_X, AT_Y)} 
+									<- message("Cant keep going east"), 
+										no_further_info(east, AT_X, AT_Y),
+										-moving, drive(west); 
+										
++!adapt_route(west, X, Y) [achieve] : {~B can_drive(north), ~B can_drive(south), ~B can_drive(west), B can_drive(east), B at(AT_X, AT_Y)} 
+									<- message("Cant keep going west"), 
+										no_further_info(west, AT_X, AT_Y),
+										-moving, drive(east); 
+									
++!adapt_route(D, X, Y) [achieve] : {True} <- message(D), print("adapt_route_true"), +blocked, -!adapt_route(D, X, Y) [achieve];
 
 
-+!avoid_obstacle(D, X, Y) [achieve] : {True} 
-									  <- message(D), print(somethingnotprogramedAVOID), drive(D), -moving;
-									  
-+!drive_and_check_route(D) [perform] : {True} <- drive(D), *at(AT_X, AT_Y), +!get_route [perform];
 
-//+at(X,Y) : {B road_ends_at(D, X, Y)} <- print(deadend), message(D);
+
++!adapt_drive(D) [perform] : {True} <- +adapt(D), -moving, drive(D);
+
++!drive_and_check_route(D) [perform] : {True} <- -moving, drive(D), *at(AT_X, AT_Y), +!get_route [perform];
+
+//+no_further(D, X, Y) : {True} <- message(D), message(X), message(Y);
+//-adapt(D, X, Y) : {True} <- message(D), message(X), message(Y);
+
+
 +at(X,Y) : {B obstacle(center, X,Y)} <- -moving, +crashed(X,Y), +!control_emergency (X,Y) [achieve], +moving;
 +at(X,Y) : {~B obstacle(center, X,Y)} <- +moving;
-
-+at(X,Y) : {True};
 
 
 // If Crashed, ask for help
 +!control_emergency (X,Y) [achieve] : {B help(X,Y), B alert_state} <-  -help(X,Y), -alert_state, -crashed(X,Y);
 +!control_emergency (X,Y) [achieve] : {B crashed(X,Y), ~B alert_state} <- call_emergency(X,Y), *help(X,Y), +alert_state;
-
-
-+north : {True} ;
-+south : {True} ;
-+east : {True} ;
-+west : {True} ;
-
--north : {True} ;
--south : {True} ;
--east : {True} ;
--west : {True} ;
