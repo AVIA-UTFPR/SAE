@@ -6,5 +6,5 @@ env = _005_dont_crash.AutonomousCarEnv
 log.warning = ail.mas.DefaultEnvironment
 log.info = ail.mas.DefaultEnvironment
 
-ajpf.record = true
+ajpf.replay = true
 ajpf.replay.file = /records/current.txt

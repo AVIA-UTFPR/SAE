@@ -3,6 +3,7 @@ package _005_dont_crash;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 //import ail.mas.DefaultEnvironment;
 import ail.mas.DefaultEnvironmentwRandomness;
@@ -14,6 +15,7 @@ import ail.syntax.Term;
 import ail.syntax.Unifier;
 import ail.syntax.VarTerm;
 import ail.util.AILexception;
+import main.Client;
 import util.Coordinate;
 import util.GridCell;
 import util.Passenger;
@@ -32,7 +34,7 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 	// Information about the grid
 
 	// Total of Static Obstacles
-	private int nObstacles = 1000;
+	private int nObstacles = 0;
 
 	// Grid is always a square. Lowest coordinate is (minGridSize, minGridSize)
 	// and Highest coordinate (maxGridSize, maxGridSize)
@@ -51,7 +53,11 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 	private Passenger currentPassenger = null;
 
 	private Coordinate car = new Coordinate(0, 0);
-	private Coordinate depotLocation = car;
+	private Coordinate depotLocation = new Coordinate(0, 0);
+	
+	// Client to send messages to the Simulator
+	Client client = new Client();
+	private boolean simulate = true;
 
 	@Override
 	public void initialise() {
@@ -62,71 +68,110 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 	public void setMAS(MAS m) {
 		super.setMAS(m);
 
+
+		
 		this.environmentGrid = initGridInformation();
 		initPassengerList();
 		initObstacles();
 		
-		
-
-		passengers.add(new Passenger("1", 1, 0, 4, 0));
-		passengers.add(new Passenger("1", 4, 0, 1, 0));
-		passengers.add(new Passenger("1", 1, 0, 4, 0));
-		passengers.add(new Passenger("1", 4, 0, 1, 0));
-		environmentGrid.get(GridCell.getIndex(2, 0)).setHasObstacle(true);
-		environmentGrid.get(GridCell.getIndex(2, 1)).setHasObstacle(true);
-		environmentGrid.get(GridCell.getIndex(2, 2)).setHasObstacle(true);
-		environmentGrid.get(GridCell.getIndex(1, 2)).setHasObstacle(true);
-		environmentGrid.get(GridCell.getIndex(3, 2)).setHasObstacle(true);
-
+		if(simulate)
+		{
+			client.sendMessage( client.convertArray2String( new String[] {"clear"} ) );
+			client.sendMessage( client.convertArray2String( new String[] {"gridSize", String.valueOf(maxGridSize)} ) );
+		}
 		/*
-		 * passengers.add(new Passenger("1" , 1, 6, 4, 6) ); passengers.add(new
-		 * Passenger("1" , 4, 6, 1, 6) ); environmentGrid.get( GridCell.getIndex(2, 4)
-		 * ).setHasObstacle(true); environmentGrid.get( GridCell.getIndex(2, 5)
-		 * ).setHasObstacle(true); environmentGrid.get( GridCell.getIndex(2, 6)
-		 * ).setHasObstacle(true); environmentGrid.get( GridCell.getIndex(1, 7)
-		 * ).setHasObstacle(true); environmentGrid.get( GridCell.getIndex(3, 7)
-		 * ).setHasObstacle(true);
+		passengers.add(new Passenger("1", 1, 0, 3, 10));
+		passengers.add(new Passenger("1", 1, 10, 3, 2));
+		passengers.add(new Passenger("1", 8, 6, 2, 9));
+		environmentGrid.get(GridCell.getIndex(4, 10)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(2, 10)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(3, 9)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(2, 8)).setHasObstacle(true);
 		 */
+		
+		/*
+		(4,10)
+		Car001 going to pick up  9 in (2,8)
+		Car001 going to drop off 9 in (10,8)
+		
+		4,9
+		to (0,0)
 
+		environmentGrid.get(GridCell.getIndex(3, 0)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(3, 1)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(3, 2)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(2, 2)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(4, 2)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(3, 10)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(3, 9)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(3, 8)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(2, 8)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(4, 8)).setHasObstacle(true);
+		
+		
+		environmentGrid.get(GridCell.getIndex(1, 2)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(1, 7)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(2, 6)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(9, 6)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(10, 2)).setHasObstacle(true);
+		 */
+		
 		/*
 		 * First Scenario: Going north or south and found an obstacle, but
 		 * believes it can go east or west.
 		 */
+		
 		/*
-		 * passengers.add(new Passenger("1" , 0, 1, 2, 3) ); passengers.add(new
-		 * Passenger("1" , 2, 3, 0, 6) ); passengers.add(new Passenger("1" , 1,
-		 * 6, 4, 6) ); passengers.add(new Passenger("1" , 4, 6, 6, 3) );
-		 * passengers.add(new Passenger("1" , 6, 3, 4, 0) );
-		 * 
-		 * passengers.add(new Passenger("1" , 7, 0, 7, 3) ); passengers.add(new
-		 * Passenger("1" , 7, 3, 7, 7) ); passengers.add(new Passenger("1" , 7,
-		 * 7, 7, 0) );
-		 * 
-		 * environmentGrid.get( GridCell.getIndex(0, 2) ).setHasObstacle(true);
-		 * environmentGrid.get( GridCell.getIndex(1, 2) ).setHasObstacle(true);
-		 * 
-		 * environmentGrid.get( GridCell.getIndex(3, 4) ).setHasObstacle(true);
-		 * environmentGrid.get( GridCell.getIndex(1, 5) ).setHasObstacle(true);
-		 * environmentGrid.get( GridCell.getIndex(2, 5) ).setHasObstacle(true);
-		 * 
-		 * environmentGrid.get( GridCell.getIndex(4, 4) ).setHasObstacle(true);
-		 * environmentGrid.get( GridCell.getIndex(5, 4) ).setHasObstacle(true);
-		 * 
-		 * environmentGrid.get( GridCell.getIndex(7, 2) ).setHasObstacle(true);
-		 * environmentGrid.get( GridCell.getIndex(5, 1) ).setHasObstacle(true);
-		 * environmentGrid.get( GridCell.getIndex(6, 1) ).setHasObstacle(true);
-		 * 
-		 * environmentGrid.get( GridCell.getIndex(8, 2) ).setHasObstacle(true);
-		 * environmentGrid.get( GridCell.getIndex(9, 2) ).setHasObstacle(true);
-		 * 
-		 * environmentGrid.get( GridCell.getIndex(6, 6) ).setHasObstacle(true);
-		 * environmentGrid.get( GridCell.getIndex(7, 6) ).setHasObstacle(true);
-		 * environmentGrid.get( GridCell.getIndex(8, 6) ).setHasObstacle(true);
-		 * environmentGrid.get( GridCell.getIndex(8, 5) ).setHasObstacle(true);
-		 * 
-		 * 
-		 * environmentGrid.get( GridCell.getIndex(8, 7) ).setHasObstacle(true);
+		 * 0,0
+		 Car001 going to pick up  0 in (6,10)
+		Car001 going to drop off 0 in (3,2)
+		
+		4,3
+		Car001 going to pick up  2 in (9,9)
+		Car001 going to drop off 2 in (10,9)
 		 */
+
+		passengers.add(new Passenger("1" , 4, 1, 7, 1) ); 
+		
+		/*
+				passengers.add(new Passenger("1" , 0, 1, 2, 3) ); 
+				passengers.add(new Passenger("1" , 2, 3, 0, 6) ); 
+		    	passengers.add(new Passenger("1" , 1, 6, 4, 6) ); 
+		    	passengers.add(new Passenger("1" , 4, 6, 6, 3) );
+				passengers.add(new Passenger("1" , 6, 3, 4, 0) );
+			  
+			  passengers.add(new Passenger("1" , 7, 0, 7, 3) ); 
+			  passengers.add(new Passenger("1" , 7, 3, 7, 7) ); 
+			  passengers.add(new Passenger("1" , 7, 7, 7, 0) );
+			  */
+
+		  environmentGrid.get( GridCell.getIndex(5, 0) ).setHasObstacle(true);
+		  environmentGrid.get( GridCell.getIndex(0, 2) ).setHasObstacle(true);
+			  environmentGrid.get( GridCell.getIndex(1, 2) ).setHasObstacle(true);
+			  
+			  environmentGrid.get( GridCell.getIndex(3, 4) ).setHasObstacle(true);
+			  environmentGrid.get( GridCell.getIndex(1, 5) ).setHasObstacle(true);
+			  environmentGrid.get( GridCell.getIndex(2, 5) ).setHasObstacle(true);
+			  
+			  environmentGrid.get( GridCell.getIndex(4, 4) ).setHasObstacle(true);
+			  environmentGrid.get( GridCell.getIndex(5, 4) ).setHasObstacle(true);
+			  
+			  environmentGrid.get( GridCell.getIndex(7, 2) ).setHasObstacle(true);
+			  environmentGrid.get( GridCell.getIndex(5, 1) ).setHasObstacle(true);
+			  environmentGrid.get( GridCell.getIndex(6, 1) ).setHasObstacle(true);
+			  
+			  environmentGrid.get( GridCell.getIndex(8, 2) ).setHasObstacle(true);
+			  environmentGrid.get( GridCell.getIndex(9, 2) ).setHasObstacle(true);
+			  
+			  environmentGrid.get( GridCell.getIndex(6, 6) ).setHasObstacle(true);
+			  environmentGrid.get( GridCell.getIndex(7, 6) ).setHasObstacle(true);
+			  environmentGrid.get( GridCell.getIndex(8, 6) ).setHasObstacle(true);
+			  environmentGrid.get( GridCell.getIndex(8, 5) ).setHasObstacle(true);
+			  
+			  
+			  environmentGrid.get( GridCell.getIndex(8, 7) ).setHasObstacle(true);
+			  
+		
 
 		// environmentGrid.get( GridCell.getIndex(0, 2) ).setHasObstacle(true);
 		// environmentGrid.get( GridCell.getIndex(1, 2) ).setHasObstacle(true);
@@ -183,7 +228,12 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 	}
 
 	private void initObstacles() {
-
+		int x, y;
+		for(int i = 0; i < this.nObstacles; i++) {
+			x = random_ints.nextInt(maxGridSize) + 1;
+			y = random_ints.nextInt(maxGridSize) + 1;
+			environmentGrid.get(GridCell.getIndex(x, y)).setHasObstacle(true);
+		}
 	}
 
 	// Identifies agents' actions
@@ -224,11 +274,13 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 			park(agName, parkType);
 
 		} else if (actionName.equals("no_further_info")) {
-			String direction = act.getTerm(0).getFunctor();
-			int x = Util.getIntTerm(act.getTerm(1));
-			int y = Util.getIntTerm(act.getTerm(2));
+			int x = Util.getIntTerm(act.getTerm(0));
+			int y = Util.getIntTerm(act.getTerm(1));
+			String direction = act.getTerm(2).getFunctor();
+			int destinationX = Util.getIntTerm(act.getTerm(3));
+			int destinationY = Util.getIntTerm(act.getTerm(4));
 
-			addNoFurtherInfo(agName, direction, x, y);
+			addNoFurtherInfo(agName, x, y, direction, destinationX, destinationY);
 
 		} else if (actionName.equals("call_emergency")) {
 
@@ -248,35 +300,47 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 		return super.executeAction(agName, act);
 
 	}
+	
+	private void addNoFurtherInfo(String agName, int x, int y, String direction, int destinationX, int destinationY) {
 
-	private void addNoFurtherInfo(String agName, String direction, int x, int y) {
-
+		//if(simulate)
+			//client.sendMessage( client.convertArray2String( new String[] {"noFurther", String.valueOf(x), String.valueOf(y), direction } ) );
+		
+		Predicate adaptFromTo = new Predicate("adapt_from_to");
+		Predicate movedFromTo = new Predicate("moved_from_to");
+			
 		switch (direction) {
 		case "north":
-			noFurtherAddTerms(agName, direction, x, --y);
+			noFurtherAddTerms(adaptFromTo, x, y-1, "north", destinationX, destinationY);
+			noFurtherAddTerms(movedFromTo, x, y-1, "south", destinationX, destinationY);
 			break;
 		case "south":
-			noFurtherAddTerms(agName, direction, x, ++y);
+			noFurtherAddTerms(adaptFromTo, x, y+1, "south", destinationX, destinationY);
+			noFurtherAddTerms(movedFromTo, x, y+1, "north", destinationX, destinationY);
 			break;
 		case "east":
-			noFurtherAddTerms(agName, direction, --x, y);
+			noFurtherAddTerms(adaptFromTo, x-1, y, "east", destinationX, destinationY);
+			noFurtherAddTerms(movedFromTo, x-1, y, "west", destinationX, destinationY);
 			break;
 		case "west":
-			noFurtherAddTerms(agName, direction, ++x, y);
+			noFurtherAddTerms(adaptFromTo, x+1, y, "west", destinationX, destinationY);
+			noFurtherAddTerms(movedFromTo, x+1, y, "east", destinationX, destinationY);
 			break;
 		}
 
+		addPercept(agName, adaptFromTo);
+		System.err.println( adaptFromTo );
+		addPercept(agName, movedFromTo);
+		System.err.println( movedFromTo );
+
 	}
 
-	private void noFurtherAddTerms(String agName, String direction, int x, int y) {
-		Predicate noFurther = new Predicate("no_further");
-
-		noFurther.addTerm(new Predicate(direction));
-		noFurther.addTerm(new NumberTermImpl(x));
-		noFurther.addTerm(new NumberTermImpl(y));
-
-		//System.err.println(noFurther);
-		addPercept(agName, noFurther);
+	private void noFurtherAddTerms(Predicate predicate, int x, int y, String direction, int destinationX, int destinationY) {
+		predicate.addTerm(new NumberTermImpl(x));
+		predicate.addTerm(new NumberTermImpl(y));
+		predicate.addTerm(new Predicate(direction));
+		predicate.addTerm(new NumberTermImpl(destinationX));
+		predicate.addTerm(new NumberTermImpl(destinationY));
 	}
 
 	private void compass(String agName, int x, int y) {
@@ -375,6 +439,14 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 	}
 
 	private void addDepot(String agName) {
+		
+		if(simulate)
+		{
+			client.sendMessage( client.convertArray2String( 
+					new String[] {"depot", String.valueOf(depotLocation.getX()), String.valueOf(depotLocation.getY())} 
+					) );
+			
+		}
 
 		Predicate depot = new Predicate("depot");
 		depot.addTerm(new NumberTermImpl(depotLocation.getX()));
@@ -424,7 +496,17 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 	}
 
 	private void updateLocation(String agName, int x, int y, int newX, int newY) {
-
+		
+		if(simulate)
+		{
+			client.sendMessage( client.convertArray2String( new String[] {"carLocation", String.valueOf(newX), String.valueOf(newY)} ) );
+			try {
+				TimeUnit.MILLISECONDS.sleep(5);
+			}
+			catch (Exception e) {
+				System.err.println(e);
+			}
+		}
 		Predicate oldLocation = new Predicate("at");
 		oldLocation.addTerm(new NumberTermImpl(x));
 		oldLocation.addTerm(new NumberTermImpl(y));
@@ -469,6 +551,10 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 
 			GridCell currentGridCell = environmentGrid.get(GridCell.getIndex(directionX, directionY));
 			if (currentGridCell.hasObstacle()) {
+				if(simulate) {
+					client.sendMessage( client.convertArray2String( new String[] {"obstacle", String.valueOf(directionX), String.valueOf(directionY)} ) );
+				}
+				
 				addObstacle(agName, direction, currentX, currentY);
 				addObstacle(agName, "center", directionX, directionY);
 			}
@@ -512,11 +598,19 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 
 			int dropOffX = currentPassenger.getDropOffX();
 			int dropOffY = currentPassenger.getDropOffY();
+			
+			if(simulate)
+			{
+				client.sendMessage( client.convertArray2String( new String[] {"pickUp", String.valueOf(pickUpX), String.valueOf(pickUpY)} ) );
+				client.sendMessage( client.convertArray2String( new String[] {"dropOff", String.valueOf(dropOffX), String.valueOf(dropOffY)} ) );
+			}
 
 			System.err.println(String.format("\n%s going to pick up  %s in (%d,%d)", agName, currentPassenger.getName(),
 					pickUpX, pickUpY));
 			System.err.println(String.format("%s going to drop off %s in (%d,%d)", agName, currentPassenger.getName(),
 					dropOffX, dropOffY));
+			
+			
 
 			Predicate pickUp = new Predicate("pick_up");
 			pickUp.addTerm(new NumberTermImpl(pickUpX));
@@ -531,7 +625,7 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 		}
 
 		Predicate rideInfo = new Predicate("ride_info");
-		addPercept(agName, rideInfo);
+		addPercept(agName, rideInfo); 
 
 	}
 
