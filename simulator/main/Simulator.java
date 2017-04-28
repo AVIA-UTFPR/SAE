@@ -36,7 +36,7 @@ public class Simulator extends JComponent{
 	private int height = 800;
 	
 	private int gridSize = 10;
-	private int gridAmplifier = 55;
+	private int gridAmplifier = 35;
 
 	private Coordinate car = new Coordinate(0, 0);
 	private Coordinate depot = new Coordinate(0, 0);
@@ -69,10 +69,11 @@ public class Simulator extends JComponent{
 			g.fillRect(getGridX( coordinate.getX() ), getGridY( coordinate.getY() ), this.gridAmplifier, this.gridAmplifier);
 		}
 		
-		g.setColor(Color.pink);
-		for (Coordinate coordinate : this.noFurther) {
-			g.fillRect(getGridX( coordinate.getX() ), getGridY( coordinate.getY() ), this.gridAmplifier, this.gridAmplifier);
-		}
+
+		// Draw Depot
+		g.setColor(Color.green);
+		g.fillRect(getGridX(depot.getX()), getGridY(depot.getY()), this.gridAmplifier, this.gridAmplifier);
+		
 		// Draw pick up
 		g.setColor(Color.CYAN);
 		g.fillRect(getXReduced(pickUp.getX(), 85), getYReduced(pickUp.getY(), 85), reducedSize(85), reducedSize(85));
@@ -80,9 +81,6 @@ public class Simulator extends JComponent{
 		g.setColor(Color.ORANGE);
 		g.fillRect(getXReduced(dropOff.getX(), 65), getYReduced(dropOff.getY(), 65), reducedSize(65), reducedSize(65));
 		
-		// Draw Depot
-		g.setColor(Color.green);
-		g.fillRect(getGridX(depot.getX()), getGridY(depot.getY()), this.gridAmplifier, this.gridAmplifier);
 		
 		// Draw Car
 		g.setColor(Color.BLUE);
@@ -153,7 +151,7 @@ public class Simulator extends JComponent{
 		int x,  y;
 		switch(messageArray[0]) {
 			case	"clear": 
-				System.out.println("clear");
+				//System.out.println("clear");
 				this.obstacles = new ArrayList<>();
 				this.noFurther = new ArrayList<>();
 				gridSize = 10;
@@ -162,38 +160,38 @@ public class Simulator extends JComponent{
 				depot = new Coordinate(0, 0);
 				break;
 			case	"gridSize": 
-				System.out.println("gridSize");
+				//System.out.println("gridSize");
 				this.gridSize = Integer.parseInt( messageArray[1] );
 				break;
 			case	"carLocation":
-				System.out.println("carLocation");
+				//System.out.println("carLocation");
 				car.setX( Integer.parseInt( messageArray[1] ) );
 				car.setY( Integer.parseInt( messageArray[2] ) );
 				break;
 			case	"depot":
-				System.out.println("depot");
+				//System.out.println("depot");
 				depot.setX( Integer.parseInt( messageArray[1] ) );
 				depot.setY( Integer.parseInt( messageArray[2] ) );
 				break;
 			case	"obstacle":
-				System.out.println("obstacle");
+				//System.out.println("obstacle");
 				x = Integer.parseInt( messageArray[1] );
 				y = Integer.parseInt( messageArray[2] );
 				this.obstacles.add( new Coordinate(x, y) );
 				break;
 			case	"noFurther":
-				System.out.println("noFurther");
+				//System.out.println("noFurther");
 				x = Integer.parseInt( messageArray[1] );
 				y = Integer.parseInt( messageArray[2] );
 				this.noFurther.add( new Coordinate(x, y) );
 				break;
 			case	"pickUp":
-				System.out.println("pickUp");
+				//System.out.println("pickUp");
 				this.pickUp.setX( Integer.parseInt( messageArray[1] ) );
 				this.pickUp.setY( Integer.parseInt( messageArray[2] ) ); 
 				break;
 			case	"dropOff":
-				System.out.println("dropOff");
+				//System.out.println("dropOff");
 				this.dropOff.setX( Integer.parseInt( messageArray[1] ) );
 				this.dropOff.setY( Integer.parseInt( messageArray[2] ) ); 
 				break;
@@ -226,7 +224,7 @@ public class Simulator extends JComponent{
 				
 				// Exibir pacote recebido
 				String sentence = new String( receivePacket.getData() );
-				System.out.println("Received: " + sentence);
+				//System.out.println("Received: " + sentence);
 				
 				sim.readReceivedMessage(sentence);
 				/*

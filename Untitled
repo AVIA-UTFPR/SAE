@@ -1,0 +1,2 @@
+can_adapt(DIR, D_X, D_Y) :- at(AT_X, AT_Y), ~obstacle(DIR, AT_X, AT_Y), ~known_route(DIR, D_X, D_Y);
+can_adapt_simple(DIR, D_X, D_Y) :- can_adapt(DIR, D_X, D_Y), go(DIR);
