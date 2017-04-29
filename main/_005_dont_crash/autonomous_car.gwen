@@ -4,8 +4,6 @@ GWENDOLEN
 
 :Initial Beliefs:
 
-min(0,0)
-
 :Reasoning Rules:
 
 arrived(X,Y) :- destination(X,Y), at(X,Y);
@@ -42,6 +40,16 @@ obstacle_ahead(DIRECTION) :- at(AT_X, AT_Y), obstacle(DIRECTION, AT_X, AT_Y);
 
 can_adapt(CA_D, D_X, D_Y) :- at(AT_X, AT_Y), ~obstacle(CA_D, AT_X, AT_Y), ~known_route(CA_D, D_X, D_Y);
 can_adapt_simple(CA_D, D_X, D_Y) :- can_adapt(CA_D, D_X, D_Y), go(CA_D);
+can_adapt_route(CA_D, D_X, D_Y) :- can_adapt(CA_D, D_X, D_Y), go_adapt(CA_D);
+
+
+go_adapt(north_south)	:- ~adapt(east), ~adapt(west);
+go_adapt(east_west) 	:- ~adapt(north), ~adapt(south);
+
+go_adapt(north) :- ~adapt(south), go(north_south);
+go_adapt(south) :- ~adapt(north), go(north_south);
+go_adapt(east) :- ~adapt(west), go(east_west);
+go_adapt(west) :- ~adapt(east), go(east_west);
 
 go(north_south)	:- ~heading(north), ~heading(south), ~adapt(east), ~adapt(west);
 go(east_west) 	:- ~heading(east), ~heading(west), ~adapt(north), ~adapt(south);
@@ -55,6 +63,8 @@ known_route(north,KR_X,KR_Y) :- at(AT_X,AT_Y), from(F_X,F_Y), adapt_from_to(F_X,
 known_route(south,KR_X,KR_Y) :- at(AT_X,AT_Y), from(F_X,F_Y), adapt_from_to(F_X,F_Y, AT_X,AT_Y, south, KR_X,KR_Y), moved_from_to(F_X,F_Y,AT_X, AT_Y, north, KR_X, KR_Y);
 known_route(east,KR_X,KR_Y) :-	at(AT_X,AT_Y), from(F_X,F_Y), adapt_from_to(F_X,F_Y, AT_X,AT_Y, east, KR_X,KR_Y), moved_from_to(F_X,F_Y,AT_X, AT_Y, west, KR_X, KR_Y);
 known_route(west,KR_X,KR_Y) :-	at(AT_X,AT_Y), from(F_X,F_Y), adapt_from_to(F_X,F_Y, AT_X,AT_Y, west, KR_X,KR_Y), moved_from_to(F_X,F_Y,AT_X, AT_Y, east, KR_X, KR_Y);
+
+moved(DIR, X, Y) :- at(AT_X,AT_Y), moved_from_to(F_X,F_Y,AT_X, AT_Y, DIR, X, Y);
 
 // Emergency
 control_emergency (X,Y) :- ~crashed(X,Y); // Car recovered from crash in (X,Y) 
@@ -72,7 +82,7 @@ finish_all_rides [achieve]
 +!finish_all_rides [achieve] : {~B at(X,Y)} <- localize, *at(GPS_X, GPS_Y);
 
 // If no passengers is available, car goes back to depot
-+!finish_all_rides [achieve] : {B no_possible_new_ride, B depot(X,Y)} <- message(depot), +done_all_rides; //+!complete_journey (X, Y) [perform], 
++!finish_all_rides [achieve] : {B no_possible_new_ride, B depot(X,Y)} <- +!complete_journey (X, Y) [perform], park(depot), +done_all_rides; //
 
 // Get New Ride
 +!finish_all_rides [achieve] : {~B ride_info} <- get_ride, *ride_info;
@@ -169,6 +179,12 @@ finish_all_rides [achieve]
 // Wait to be in movement to drive
 +!drive_to(X,Y) [achieve] : {~B moving} <- *moving;		
 
+
+// Accident Ahead 						
++!drive_to(X,Y) [achieve] : {B heading(D), B at(AT_X, AT_Y), B cant_avoid_obstacle(D, AT_X, AT_Y)}
+							<- -cant_avoid_obstacle(north, 0, 0), -moving, message("Accident Ahead"), +!drive_direction(D) [perform];
+
+
 // Obstacle Avoidance						
 +!drive_to(X,Y) [achieve] : {B heading(D), B obstacle_ahead(D)}
 							<- -moving, +adapt, +!adapt_route(D,X,Y) [achieve];
@@ -187,7 +203,7 @@ finish_all_rides [achieve]
 // ---------------------------------------- Drive Direction ----------------------------------------
 
 +!drive_direction(D) [perform] : { G drive_to(X, Y) [achieve] , B from(F_X,F_Y)} 
-						<- -moving, drive(F_X,F_Y, D, X, Y), *at(NEW_X, NEW_Y), +moving;
+						<- -moving, drive(F_X,F_Y, D, X, Y);
 
 // ---------------------------------------- Obstacle Avoidance and adapt Route - !adapt_route(D, X, Y) [achieve]  ----------------------------------------
 
@@ -196,101 +212,121 @@ finish_all_rides [achieve]
 							<- +blocked, -!adapt_route(D) [achieve];
 									
 +!adapt_route(D,X,Y) [achieve] : {B adapt, B can_adapt(D,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
-							<- 	-adapt, message(D), +adapt_from_to(F_X,F_Y, AT_X, AT_Y, D, X, Y), 
+							<- 	-adapt, +adapt_from_to(F_X,F_Y, AT_X, AT_Y, D, X, Y), 
 								+!drive_direction(D) [perform],
-								+!get_route [perform],
+								+!get_route [perform], 
+								-!adapt_route(D,X,Y) [achieve];
+								
++!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), ~B can_adapt(west,X,Y)}
+							<- 	-!drive_to(X,Y) [achieve],
 								-!adapt_route(D,X,Y) [achieve];
 								
 								
 // ---------------------------------------- HOLD THE SCROLL IS HERE  ----------------------------------------
 
-+!adapt_route(D,X,Y) [achieve] : {~B adapt} <- print(waitMolagKena), *adapt, print(stopWaiting);
++!adapt_route(D,X,Y) [achieve] : {~B adapt} <- *adapt;
 
 
 // ------------------------------ North or South - Avoid Simple  ------------------------------
-
+	
+														
 // Simple Belief North or South to East or West
-+!adapt_route(D,X,Y) [achieve] : {B can_adapt_simple(east,X,Y), B east, B north_south} 
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(east,X,Y), B east, B north_south} 
 								<- -adapt, message("Simple Belief North or South to East"), 
 								+!adapt_drive_direction(east,X,Y) [perform]; 
 								
-+!adapt_route(D,X,Y) [achieve] : {B can_adapt_simple(west,X,Y), B west, B north_south} 
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(west,X,Y), B west, B north_south} 
 								<- -adapt, message("Simple Belief North or South to West"), 
 								+!adapt_drive_direction(west,X,Y) [perform];
-			
-+!adapt_route(D,X,Y) [achieve] : {B can_adapt_simple(east,X,Y), B north_south} 
+										
+										
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(east,X,Y), B north_south} 
 									<- -adapt, message("Reroute North or South to East"), 
 									+!adapt_drive_direction(east,X,Y) [perform]; 
 									
-+!adapt_route(D,X,Y) [achieve] : {B can_adapt_simple(west,X,Y), B north_south}
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(west,X,Y), B north_south}
 									<- -adapt, message("Reroute North or South to West"), 
 									+!adapt_drive_direction(west,X,Y) [perform];  
 									
 // ------------------------------ East or West - Avoid Simple  ------------------------------
-
+								
 //Simple Belief East or West to North or South
 // If it came from North, adapt South. And vice-versa
 
-+!adapt_route(D,X,Y) [achieve] : {B north, B can_adapt_simple(north,X,Y), B east_west}
++!adapt_route(D,X,Y) [achieve] : {B north, B can_adapt_route(north,X,Y), B east_west}
 									<- -adapt,  message("Simple Belief East or West to North"), +!adapt_drive_direction(north,X,Y) [perform];
-+!adapt_route(D,X,Y) [achieve] : {B south, B can_adapt_simple(south,X,Y), B east_west}
++!adapt_route(D,X,Y) [achieve] : {B south, B can_adapt_route(south,X,Y), B east_west}
 									<- -adapt,  message("Simple Belief East or West to South"), +!adapt_drive_direction(south,X,Y) [perform];
 
-+!adapt_route(D,X,Y) [achieve] : {B can_adapt_simple(north,X,Y), B east_west}
+	
+
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(north,X,Y), B east_west}
 									<- -adapt, message("Reroute East or West to North"), +!adapt_drive_direction(north,X,Y) [perform];
-+!adapt_route(D,X,Y) [achieve] : {B can_adapt_simple(south,X,Y), B east_west}
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(south,X,Y), B east_west}
 									<- -adapt, message("Reroute East or West to South"), +!adapt_drive_direction(south,X,Y) [perform];
-									
-									
-								
+
+
+// ------------------------------------------------------------		 Go Back
++!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
+									<- -adapt,
+										message("Go back west"),
+										-moving, drive(F_X,F_Y, west, X, Y), 
+										+adapt;
+										
++!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
+									<- -adapt,
+										message("Go back east"),
+										-moving, drive(F_X,F_Y, east, X, Y), 
+										+adapt;
+										
++!adapt_route(D,X,Y) [achieve] : {B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
+									<- -adapt,
+										message("Go back north"),
+										-moving, drive(F_X,F_Y, north, X, Y), 
+										+adapt;
+										
++!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
+									<- -adapt,
+										message("Go back south"),
+										-moving, drive(F_X,F_Y, south, X, Y), 
+										+adapt;
+										
+										
 // ------------------------------ Avoid Obstacles while re-routing  ------------------------------
 
 //Reroute the reroute from East or West to North
 +!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), B can_adapt(south,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
 									<- -adapt,
 										message("EW Cant keep going north"),
-										-adapt(north),
 										no_further_from(F_X,F_Y,AT_X, AT_Y, X, Y), *no_further(F_X,F_Y,AT_X, AT_Y, X, Y),
+										+!clear_adapt [perform],
 										+!drive_direction(south) [perform],
 										+adapt;
 										
 +!adapt_route(D,X,Y) [achieve] : {~B can_adapt(south,X,Y), B can_adapt(north,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
 									<- -adapt,
 										message("EW Cant keep going south"),
-										-adapt(south),
 										no_further_from(F_X,F_Y,AT_X, AT_Y, X, Y), *no_further(F_X,F_Y,AT_X, AT_Y, X, Y),
-										+!drive_direction(north) [perform],
-										+adapt;
-										
-										
-// ------------------------------------------------------------		 Go Back
-+!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
-									<- -adapt,
-										message("Go back west"),
 										+!clear_adapt [perform],
-										-moving, drive(F_X,F_Y, west, X, Y), *at(NEW_X, NEW_Y), +adapt_from_to(F_X,F_Y, NEW_X, NEW_Y, east, X, Y),
+										+!drive_direction(north) [perform], 
 										+adapt;
-										
-+!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
+
++!adapt_route(D,X,Y) [achieve] : {~B can_adapt(east,X,Y), B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
 									<- -adapt,
-										message("Go back east"),
+										message("EW Cant keep going east"),
+										no_further_from(F_X,F_Y,AT_X, AT_Y, X, Y), *no_further(F_X,F_Y,AT_X, AT_Y, X, Y),
 										+!clear_adapt [perform],
-										-moving, drive(F_X,F_Y, east, X, Y), *at(NEW_X, NEW_Y), +moving, +adapt_from_to(F_X,F_Y, NEW_X, NEW_Y, west, X, Y),
+										+!drive_direction(west) [perform],
 										+adapt;
-										
-+!adapt_route(D,X,Y) [achieve] : {B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
+
++!adapt_route(D,X,Y) [achieve] : {~B can_adapt(west,X,Y), B can_adapt(east,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
 									<- -adapt,
-										message("Go back north"),
+										message("EW Cant keep going west"),
+										no_further_from(F_X,F_Y,AT_X, AT_Y, X, Y), *no_further(F_X,F_Y,AT_X, AT_Y, X, Y),
 										+!clear_adapt [perform],
-										-moving, drive(F_X,F_Y, north, X, Y), *at(NEW_X, NEW_Y), +adapt_from_to(F_X,F_Y, NEW_X, NEW_Y, south, X, Y),
-										+adapt;
-										
-+!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
-									<- -adapt,
-										message("Go back south"),
-										+!clear_adapt [perform],
-										-moving, drive(F_X,F_Y, south, X, Y), *at(NEW_X, NEW_Y), +moving, +adapt_from_to(F_X,F_Y, NEW_X, NEW_Y, north, X, Y),
-										+adapt;
+										+!drive_direction(east) [perform],
+										+adapt;									
+
 
 // ------------------------------------------------------------										
 +!adapt_route(D,X,Y) [achieve] : {True} 
@@ -309,27 +345,42 @@ finish_all_rides [achieve]
 // ---------------------------------------- adapt_from_to - moved_from_to
 
 
-+adapt_from_to(F_X,F_Y,10,0,A_D,X,Y) : {True} <- +.lock, a_m(adapt,10,0,A_D,X,Y),-.lock;
-+moved_from_to(10,0,A_D,X,Y) : {True} <- +.lock, a_m(moved,10,0,A_D,X,Y),-.lock;
++at(AT_X, AT_Y) : {~B can_adapt(north,X,Y), B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B north, 
+					G drive_to(X,Y) [achieve], B from(F_X,F_Y)} 
+				<- -adapt, no_further_from(F_X,F_Y, AT_X, AT_Y, X,Y), *no_further(F_X,F_Y, AT_X, AT_Y, X,Y), +moving, +adapt;
 
-+at(AT_X, AT_Y) : {B moved_from_to(F_X,F_Y, AT_X, AT_Y, south, DES_X, DES_Y), B moved_from_to(F_X,F_Y,AT_X, AT_Y, north, DES_X, DES_Y), G drive_to(DES_X, DES_Y) [achieve], B from(F_X,F_Y)} 
-				<- no_further_from(F_X,F_Y, AT_X, AT_Y, DES_X, DES_Y), *no_further(F_X,F_Y, AT_X, AT_Y, DES_X, DES_Y), +moving;
++at(AT_X, AT_Y) : {B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B south, 
+					G drive_to(X,Y) [achieve], B from(F_X,F_Y)} 
+				<- -adapt, no_further_from(F_X,F_Y, AT_X, AT_Y, X,Y), *no_further(F_X,F_Y, AT_X, AT_Y, X,Y), +moving, +adapt;
 
++at(AT_X, AT_Y) : {~B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), B can_adapt(west,X,Y), B east, 
+					G drive_to(X,Y) [achieve], B from(F_X,F_Y)} 
+				<- -adapt, no_further_from(F_X,F_Y, AT_X, AT_Y, X,Y), *no_further(F_X,F_Y, AT_X, AT_Y, X,Y), +moving, +adapt;
+				
++at(AT_X, AT_Y) : {~B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B west, 
+					G drive_to(X,Y) [achieve], B from(F_X,F_Y)} 
+				<- -adapt, no_further_from(F_X,F_Y, AT_X, AT_Y, X,Y), *no_further(F_X,F_Y, AT_X, AT_Y, X,Y), +moving, +adapt;
 
-//+adapt_from_to(10,1,A_D,X,Y) : {True} <- +.lock, a_m(adapt,10,1,A_D,X,Y),-.lock;
-//+moved_from_to(10,1,A_D,X,Y) : {True} <- +.lock, a_m(moved,10,1,A_D,X,Y),-.lock;
+										
+//+at(AT_X, AT_Y) : {B moved_from_to(F_X,F_Y, AT_X, AT_Y, south, DES_X, DES_Y), B moved_from_to(F_X,F_Y,AT_X, AT_Y, north, DES_X, DES_Y), 
+//					G drive_to(DES_X, DES_Y) [achieve], B from(F_X,F_Y)} 
+//				<- no_further_from(F_X,F_Y, AT_X, AT_Y, DES_X, DES_Y), *no_further(F_X,F_Y, AT_X, AT_Y, DES_X, DES_Y), +moving;
+
 					
 
 // ---------------------------------------- obstacle(D, X,Y)  ----------------------------------------
-+obstacle(center, X, Y) : {G drive_to(X,Y) [achieve]} <- -!drive_to(X,Y) [achieve], -!adapt_route(D) [achieve];
+
+
++obstacle(center, PK_X,PK_Y) : {B pick_up(PK_X,PK_Y)} <- -!drive_to(X,Y) [achieve], -!adapt_route(D) [achieve];
++obstacle(center, DP_X,DP_Y) : {B drop_off(DP_X,DP_Y)} <- -!drive_to(X,Y) [achieve], -!adapt_route(D) [achieve];
 
 // ---------------------------------------- at(X,Y)  ----------------------------------------
 
-+at(X,Y) : {B obstacle(center, X,Y)} <- -moving, +crashed(X,Y), +!control_emergency (X,Y) [achieve], +moving;
++at(X,Y) : {B obstacle(center, X,Y)} <- -moving, +crashed(X,Y), +!control_emergency (X,Y) [achieve];
 +at(AT_X,AT_Y) : {True} <- +moving;
 
 
 // ---------------------------------------- Control Emergencies - !control_emergency (X,Y)  ----------------------------------------
 // If Crashed, ask for help
-+!control_emergency (X,Y) [achieve] : {B help(X,Y), B alert_state} <-  -help(X,Y), -alert_state, -crashed(X,Y);
++!control_emergency (X,Y) [achieve] : {B help(X,Y), B alert_state} <-  -help(X,Y), -alert_state, -crashed(X,Y), message("Assisted"), +moving;
 +!control_emergency (X,Y) [achieve] : {B crashed(X,Y), ~B alert_state} <- call_emergency(X,Y), *help(X,Y), +alert_state;

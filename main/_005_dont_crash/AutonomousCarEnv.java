@@ -15,6 +15,7 @@ import ail.syntax.Term;
 import ail.syntax.Unifier;
 import ail.syntax.VarTerm;
 import ail.util.AILexception;
+import ajpf.util.choice.Choice;
 import main.Client;
 import util.Coordinate;
 import util.GridCell;
@@ -23,37 +24,35 @@ import util.Util;
 
 public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 	
-	// Log
-	private boolean log = true;
-	private boolean graphics = true;
+
+	Choice<Boolean> accident_chance;
+	
 
 	// Information about the car
 	// Initial position of the car
+	private Coordinate car = new Coordinate(0, 0);
+	private Coordinate depotLocation = new Coordinate(0, 0);
+	private String currentDirection = "north";
 
 
 	// Information about the grid
 
 	// Total of Static Obstacles
-	private int nObstacles = 0;
+	private int nObstacles = 50;
 
 	// Grid is always a square. Lowest coordinate is (minGridSize, minGridSize)
 	// and Highest coordinate (maxGridSize, maxGridSize)
 	private int minGridSize = 0;
 	private int maxGridSize = 15;
 
-	// private Coordinate minGrid = new Coordinate(0,0);
-	// private Coordinate maxGrid = new Coordinate(maxGridSize,maxGridSize);
-
 	// Information about each position
 	Map<String, GridCell> environmentGrid;
 
 	// Information about passengers
 	private ArrayList<Passenger> passengers = new ArrayList<Passenger>();
-	private int maxInitPassengers = 0;
+	private int maxInitPassengers = 5;
 	private Passenger currentPassenger = null;
 
-	private Coordinate car = new Coordinate(0, 0);
-	private Coordinate depotLocation = new Coordinate(0, 0);
 	
 	// Client to send messages to the Simulator
 	Client client = new Client();
@@ -69,19 +68,38 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 		super.setMAS(m);
 
 
+		accident_chance = new Choice<Boolean>(m.getController());
+		accident_chance.addChoice(0.9, false);
+		accident_chance.addChoice(0.1, true);
 		
 		this.environmentGrid = initGridInformation();
 		initPassengerList();
 		initObstacles();
 		
-		if(simulate)
-		{
-			client.sendMessage( client.convertArray2String( new String[] {"clear"} ) );
-			client.sendMessage( client.convertArray2String( new String[] {"gridSize", String.valueOf(maxGridSize)} ) );
+		client.sendMessage( client.convertArray2String( new String[] {"clear", String.valueOf(maxGridSize)} ) );
+		client.sendMessage( client.convertArray2String( new String[] {"gridSize", String.valueOf(maxGridSize)} ) );
+		try {
+			TimeUnit.MILLISECONDS.sleep(100);
+		} catch(Exception e) {
+			System.err.println(e);
 		}
-
+		/*
+		passengers.add(new Passenger("" , 4, 1, 7, 1) );
+		passengers.add(new Passenger("" , 4, 1, 7, 1) );
+		passengers.add(new Passenger("" , 4, 1, 7, 1) );
+		environmentGrid.get(GridCell.getIndex(5, 0)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(5, 1)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(5, 2)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(6, 2)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(7, 2)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(8, 2)).setHasObstacle(true);
+		environmentGrid.get(GridCell.getIndex(9, 3)).setHasObstacle(true);
 		
+		*/
+		/*
+
 		passengers.add(new Passenger("" , 0, 9, 0, 9) );
+		passengers.add(new Passenger("" , 0, 0, 0, 9) );
 		passengers.add(new Passenger("Simple Belief East to North" , 0, 9, 3, 11) );
 		passengers.add(new Passenger("Simple Belief West to North" , 3, 9, 0, 11) );
 		
@@ -149,10 +167,15 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 		
 
 		passengers.add(new Passenger("Return South to North - East" , 10, 9, 12, 9) );
-		//passengers.add(new Passenger("Return South to North - East" , 10, 9, 12, 9) );
+		passengers.add(new Passenger("Return South to North - East" , 10, 9, 12, 9) );
 		//passengers.add(new Passenger("Return South to North - East" , 10, 9, 12, 9) );
 		
-
+		
+		passengers.add(new Passenger("Return North - South - EW" , 10, 0, 13, 1) );
+		passengers.add(new Passenger("Return North - South - EW" , 10, 0, 13, 1) );
+		passengers.add(new Passenger("Return North - South - EW" , 10, 0, 13, 1) );
+		
+		
 		environmentGrid.get(GridCell.getIndex(9, 10)).setHasObstacle(true);
 		environmentGrid.get(GridCell.getIndex(10, 10)).setHasObstacle(true);
 		environmentGrid.get(GridCell.getIndex(11, 10)).setHasObstacle(true);
@@ -203,6 +226,10 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 		environmentGrid.get(GridCell.getIndex(2, 15)).setHasObstacle(true);
 		environmentGrid.get(GridCell.getIndex(2, 14)).setHasObstacle(true);
 		
+		*/
+
+		environmentGrid.get(GridCell.getIndex(car.getX(), car.getY())).setHasObstacle(false);
+		environmentGrid.get(GridCell.getIndex(depotLocation.getX(), depotLocation.getY())).setHasObstacle(false);
 
 		showAllPassengerList();
 
@@ -277,6 +304,8 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 			compass(agName, x, y);
 
 		} else if (actionName.equals("localize")) {
+			
+			
 
 			localize(agName);
 
@@ -309,14 +338,6 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 			System.err.println(am + " - "+ direction +": ("+x+","+y+") to ("+dx+","+dy+")");
 
 
-		} else if (actionName.equals("go_back")) {
-
-			String direction = act.getTerm(0).getFunctor();
-			int x = Util.getIntTerm(act.getTerm(1));
-			int y = Util.getIntTerm(act.getTerm(2));
-
-			//goBack(agName, direction, x, y);
-
 		} else if (actionName.equals("no_further_from")) {
 			int fromX = Util.getIntTerm(act.getTerm(0));
 			int fromY = Util.getIntTerm(act.getTerm(1));
@@ -345,35 +366,6 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 		return super.executeAction(agName, act);
 
 	}
-	/*
-	private void goBack(String agName, String direction, int destinationX, int destinationY) {
-
-		int carX = car.getX();
-		int carY = car.getY();
-		
-		Predicate adaptFromTo = new Predicate("adapt_from_to");
-		Predicate movedFromTo = new Predicate("moved_from_to");
-			
-		switch (direction) {
-			case "north":
-				addFromTo(adaptFromTo, carX, carY, "south", destinationX, destinationY);
-				addFromTo(movedFromTo, carX, carY, "north", destinationX, destinationY);
-				break;
-			case "south":
-				addFromTo(adaptFromTo, carX, carY, "north", destinationX, destinationY);
-				addFromTo(movedFromTo, carX, carY, "south", destinationX, destinationY);
-				break;
-			case "east":
-				addFromTo(adaptFromTo, carX, carY, "west", destinationX, destinationY);
-				addFromTo(movedFromTo, carX, carY, "east", destinationX, destinationY);
-				break;
-			case "west":
-				addFromTo(adaptFromTo, carX, carY, "east", destinationX, destinationY);
-				addFromTo(movedFromTo, carX, carY, "west", destinationX, destinationY);
-				break;
-			}
-		
-	}*/
 	
 	private void addFromTo(Predicate predicate, int fromX, int fromY, int x, int y, String direction, int destinationX, int destinationY) {
 		predicate.addTerm(new NumberTermImpl(fromX));
@@ -455,8 +447,6 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 		Predicate receiveDirection = new Predicate("receive_direction");
 		addPercept(agName, receiveDirection);
 
-		// System.err.println(receiveDirection);
-
 	}
 
 	private void addDirection(String agName, String direction) {
@@ -488,7 +478,6 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 			break;
 		default:
 			break;
-
 		}
 
 		System.err.println(String.format("%s can't %s passanger %s", agName, refuseType, currentPassenger.getName()));
@@ -497,7 +486,6 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 
 	private void park(String agName, String parkType) {
 
-		Predicate passenger = new Predicate("passenger");
 
 		switch (parkType) {
 		case "pick_up":
@@ -509,7 +497,8 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 					car.getX(), car.getY()));
 			break;
 		case "depot":
-			System.err.println(String.format("%s is back to the depot.", agName));
+			if(car.getX() == depotLocation.getX() && car.getY() == depotLocation.getY())
+				System.err.println(String.format("%s is back to the depot.", agName));
 			break;
 		default:
 			break;
@@ -559,6 +548,8 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 	}
 
 	private void drive(String agName, int fromX, int fromY, String direction, int destinationX, int destinationY) {
+		
+		this.currentDirection = direction;
 
 		// Don't move if direction is invalid
 		int newX = car.getX();
@@ -579,13 +570,21 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 			break;
 		default:
 		}
+		
+
 
 
 		Predicate movedFromTo = new Predicate("moved_from_to");
+		Predicate adaptedFromTo = new Predicate("adapt_from_to");
+		
+
+		addFromTo(adaptedFromTo, fromX, fromY, car.getX(), car.getY(), direction, destinationX, destinationY);
 		addFromTo(movedFromTo, fromX, fromY, newX, newY, direction, destinationX, destinationY);
+
+		addPercept(agName, adaptedFromTo); // inform where the car came from
 		addPercept(agName, movedFromTo); // inform where the car came from
 		
-		//System.err.println(String.format("Moving %s from (%d,%d) to (%d,%d)", direction, car.getX(), car.getY(), newX, newY));
+		System.err.println(String.format("Moving %s from (%d,%d) to (%d,%d)", direction, car.getX(), car.getY(), newX, newY));
 
 		updateLocation(agName, car.getX(), car.getY(), newX, newY);
 
@@ -593,6 +592,7 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 
 	private void updateLocation(String agName, int x, int y, int newX, int newY) {
 		
+
 /*
  * 	try {
 				TimeUnit.MILLISECONDS.sleep(0);
@@ -601,8 +601,7 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 				System.err.println(e);
 			}
  */
-		client.sendMessage( client.convertArray2String( new String[] {"carLocation", String.valueOf(newX), String.valueOf(newY)} ) );
-		
+		client.sendMessage( client.convertArray2String( new String[] {"carLocation", String.valueOf(newX), String.valueOf(newY), this.currentDirection} ) );
 
 		Predicate oldLocation = new Predicate("at");
 		oldLocation.addTerm(new NumberTermImpl(x));
@@ -637,6 +636,8 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 	private void verifyObstacle(String agName, String direction, int directionX, int directionY, int currentX,
 			int currentY) {
 		// Areas that the agent can't reach are marked as obstacles
+		
+		
 
 		if (directionX < minGridSize || directionX > maxGridSize || directionY < minGridSize
 				|| directionY > maxGridSize) {
@@ -652,6 +653,18 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 					client.sendMessage( client.convertArray2String( new String[] {"obstacle", String.valueOf(directionX), String.valueOf(directionY)} ) );
 				}
 				
+				if(direction.equals(this.currentDirection)) {
+					boolean accident = accident_chance.get_choice();
+					if (accident)
+					{
+						client.sendMessage( client.convertArray2String( new String[] {"cant_avoid_obstacle", String.valueOf(directionX), String.valueOf(directionY)} ) );
+						Predicate cantAvoidObstacle = new Predicate("cant_avoid_obstacle");
+						cantAvoidObstacle.addTerm(new Predicate(direction));
+						cantAvoidObstacle.addTerm(new NumberTermImpl(currentX));
+						cantAvoidObstacle.addTerm(new NumberTermImpl(currentY));
+						addPercept(agName, cantAvoidObstacle);
+					}
+				}
 				addObstacle(agName, direction, currentX, currentY);
 				addObstacle(agName, "center", directionX, directionY);
 			}
