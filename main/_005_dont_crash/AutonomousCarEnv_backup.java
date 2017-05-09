@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import ail.mas.DefaultEnvironment;
+//import ail.mas.DefaultEnvironment;
 import ail.mas.DefaultEnvironmentwRandomness;
 import ail.mas.MAS;
 import ail.syntax.Action;
@@ -21,7 +21,7 @@ import util.GridCell;
 import util.Passenger;
 import util.Util;
 
-public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentwRandomness
+public class AutonomousCarEnv_backup extends DefaultEnvironmentwRandomness {
 	
 	// Variável utilizada para o ambiente decidir qual é a chance de um acidente acontecer 
 	private Choice<Boolean> accidentChance;
@@ -46,7 +46,7 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 
 	// Informações sobre os passageiros
 	private ArrayList<Passenger> passengers = new ArrayList<Passenger>(); // Lista de passageiros
-	private int maxInitPassengers = 0; // Número de passageiros gerados randômicamente
+	private int maxInitPassengers = 1; // Número de passageiros gerados randômicamente
 	private Passenger currentPassenger; 
 
 	
@@ -57,6 +57,10 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 	// Tempo de espera padrão para que o ambiente atualize novamente. 
 	//Têm o propósito de parar o processamente do ambiente e do agente para que possa ser possível acompanhar a execução pelo simulador.
 
+	@Override
+	public void initialise() {
+
+	}
 
 	// Configurações Iniciais do Ambiente
 	@Override
@@ -81,18 +85,22 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 		 * 3 - Colisão Leve (low) - Chances de ocorrência 65%: Causa apenas arranhões no veículo, nenhum passageiro se fere.
 		 */
 		damageLevel = new Choice<String>(m.getController());
+		damageLevel.addChoice(0.0, "high");
+		damageLevel.addChoice(0.0, "moderate");
+		damageLevel.addChoice(1.0, "low");
+		
+		/*
 		damageLevel.addChoice(0.125, "high");
 		damageLevel.addChoice(0.25, "moderate");
 		damageLevel.addChoice(0.0625, "low");
+		 */
+	
+		
 		
 		// Define as informações inicias sobre o  ambiente. Mapemento das posições, lista de passageiros e lista de obstáculos.
 		this.environmentGrid = initGridInformation();
 		initPassengerList();
 		initObstacles();
-		
-		/*
-		 * 
-		 */
 		
 		
 		/*
@@ -146,15 +154,13 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 	private void initPassengerList() {
 		for (int i = 0; i < maxInitPassengers; i++) {
 
-			/*
 			int pickUpX = random_ints.nextInt(maxGridSize) + 1;
 			int pickUpY = random_ints.nextInt(maxGridSize) + 1;
 
 			int dropOffX = random_ints.nextInt(maxGridSize) + 1;
 			int dropOffY = random_ints.nextInt(maxGridSize) + 1;
 
-*/
-			passengers.add(new Passenger("" + i, 1, 1, 2, 2));
+			passengers.add(new Passenger("" + i, pickUpX, pickUpY, dropOffX, dropOffY));
 		}
 	}
 
@@ -162,9 +168,9 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 	private void initObstacles() {
 		int x, y;
 		for(int i = 0; i < this.nObstacles; i++) {
-			//x = random_ints.nextInt(maxGridSize) + 1;
-			//y = random_ints.nextInt(maxGridSize) + 1;
-			environmentGrid.get(GridCell.getIndex(5, 5)).setHasObstacle(true);
+			x = random_ints.nextInt(maxGridSize) + 1;
+			y = random_ints.nextInt(maxGridSize) + 1;
+			environmentGrid.get(GridCell.getIndex(x, y)).setHasObstacle(true);
 		}
 	}
 

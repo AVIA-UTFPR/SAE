@@ -20,9 +20,6 @@ position_grid(AT_X, AT_Y,D_X, D_Y) :- at(AT_X, AT_Y), destination(D_X, D_Y);
 go_to_destination [achieve]
 
 :Plans:
-
-
-
 +!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B going_north,
 									B position_grid(AT_X, Y, D_X, Y), AT_X < D_X} 
 								<- print("turn north to east"), -going_north, +going_east;

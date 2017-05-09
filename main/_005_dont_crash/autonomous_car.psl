@@ -1,5 +1,3 @@
-1: <> B(car, arrived(_,_)) -> <> ItD(car, honk)
+1: [] B(vehicle, name(vehicle))
 
-2: G(car, go_to_destination) -> <> B(car, arrived(_,_))
-
-3: B(car, going_north) -> <> ItD(car, drive(north))
+FAR1: ( D (vehicle, location)

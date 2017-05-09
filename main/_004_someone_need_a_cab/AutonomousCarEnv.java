@@ -12,8 +12,6 @@ import ail.syntax.Term;
 import ail.syntax.Unifier;
 import ail.syntax.VarTerm;
 import ail.util.AILexception;
-import ajpf.util.choice.ProbBoolChoice;
-import ajpf.util.choice.UniformBoolChoice;
 import util.Passenger;
 
 public class AutonomousCarEnv extends DefaultEnvironmentwRandomness{

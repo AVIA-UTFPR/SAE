@@ -1,0 +1,593 @@
+GWENDOLEN
+
+// Nome do agente
+:name: car
+
+:Initial Beliefs:
+name(car)
+
+// O agente não possui nenhum conhecimento inicial
+
+:Reasoning Rules:
+
+/*
+Será definido a seguir algumas crenças do agentes que são utilizadas ao decorrer de sua implementação.
+at(X,Y) : Indica que o agente está localizado nas coordenadas (X,Y) do ambiente.
+
+*/
+
+arrived(X,Y) :- destination(X,Y), at(X,Y);
+drive_to(X,Y) :- arrived(X,Y);
+finish_all_rides :- done_all_rides;
+
+// ------------------ Directions ------------------
+
+north_south :- north;
+north_south :- south;
+east_west :- east;
+east_west :- west;
+
+// ------------------ Ride information ------------------
+
+current_pick_up(X,Y) :- ride_info, pick_up(X,Y);
+current_drop_off(X,Y) :- ride_info, drop_off(X,Y);
+
+journey_not_possible(X,Y) :-verify_journey(X,Y), ~possible_journey_to(X,Y);
+
+reach(X,Y) :- try_to_reach(X,Y), at(X,Y);
+
+// ------------------ Drive ------------------
+
+turn(north) :- heading(north), destination(X,Y), at(AT_X,Y);
+turn(south) :- heading(south), destination(X,Y), at(AT_X,Y);
+
+turn(east) :- heading(east), east, destination(X,Y), at(X,AT_Y);
+turn(west) :- heading(west), west, destination(X,Y), at(X,AT_Y);
+
+// ------------------ Avoid Obstacles ------------------
+
+obstacle_ahead(DIRECTION) :- at(AT_X, AT_Y), obstacle(DIRECTION, AT_X, AT_Y);
+
+can_adapt(CA_D, D_X, D_Y) :- at(AT_X, AT_Y), ~obstacle(CA_D, AT_X, AT_Y), ~known_route(CA_D, D_X, D_Y);
+can_adapt_simple(CA_D, D_X, D_Y) :- can_adapt(CA_D, D_X, D_Y), go(CA_D);
+can_adapt_route(CA_D, D_X, D_Y) :- can_adapt(CA_D, D_X, D_Y), go_adapt(CA_D);
+
+
+go_adapt(north_south)	:- ~adapt(east), ~adapt(west);
+go_adapt(east_west) 	:- ~adapt(north), ~adapt(south);
+
+go_adapt(north) :- ~adapt(south), go(north_south);
+go_adapt(south) :- ~adapt(north), go(north_south);
+go_adapt(east) :- ~adapt(west), go(east_west);
+go_adapt(west) :- ~adapt(east), go(east_west);
+
+go(north_south)	:- ~heading(north), ~heading(south), ~adapt(east), ~adapt(west);
+go(east_west) 	:- ~heading(east), ~heading(west), ~adapt(north), ~adapt(south);
+
+go(north) :- ~adapt(south), go(north_south);
+go(south) :- ~adapt(north), go(north_south);
+go(east) :- ~adapt(west), go(east_west);
+go(west) :- ~adapt(east), go(east_west);
+
+known_route(north,KR_X,KR_Y) :- at(AT_X,AT_Y), from(F_X,F_Y), adapt_from_to(F_X,F_Y, AT_X,AT_Y, north, KR_X,KR_Y), moved_from_to(F_X,F_Y,AT_X, AT_Y, south, KR_X, KR_Y);
+known_route(south,KR_X,KR_Y) :- at(AT_X,AT_Y), from(F_X,F_Y), adapt_from_to(F_X,F_Y, AT_X,AT_Y, south, KR_X,KR_Y), moved_from_to(F_X,F_Y,AT_X, AT_Y, north, KR_X, KR_Y);
+known_route(east,KR_X,KR_Y) :-	at(AT_X,AT_Y), from(F_X,F_Y), adapt_from_to(F_X,F_Y, AT_X,AT_Y, east, KR_X,KR_Y), moved_from_to(F_X,F_Y,AT_X, AT_Y, west, KR_X, KR_Y);
+known_route(west,KR_X,KR_Y) :-	at(AT_X,AT_Y), from(F_X,F_Y), adapt_from_to(F_X,F_Y, AT_X,AT_Y, west, KR_X,KR_Y), moved_from_to(F_X,F_Y,AT_X, AT_Y, east, KR_X, KR_Y);
+
+moved(DIR, X, Y) :- at(AT_X,AT_Y), moved_from_to(F_X,F_Y,AT_X, AT_Y, DIR, X, Y);
+
+
+// ------------------ Controle de danos em caso de colisões ------------------
+//A emergência é dita como controlado caso o veículo não acredite que esteja em uma batida (~crashed(X,Y)).
+control_emergency (X,Y) :- ~crashed(X,Y);
+
+:Initial Goals:
+
+finish_all_rides [achieve]
+
+:Plans:
+
+
+// ---------------------------------------------- Finish all Rides - !finish_all_rides [achieve] ----------------------------------------------
+/*
+O objetivo finish_all_rides é o principal do agente.
+O agente busca por corridas (rides) até acreditar que não há mais nenhuma possível, no_possible_new_ride, e assim, encerrando sua execução.
+Como definido na seção Reasoning Rules do código do agente, finish_all_rides é satisfeita pela adição da crença done_all_rides.
+
+FAR 1
+	Pré-condições: O agente não sabe sua localização no ambiente, ~at(X,Y).
+	Planos: O agente executa uma ação para encontrar sua posição dentro do ambiente, localize,
+	e suspende sua execução até que o ambiente informe as coordenadas da sua localização, *at(GPS_X, GPS_Y).
+
+FAR 2
+	Pré-condições: Houve uma colisão gravíssima (life_threatening).
+	Planos: O agente informa o ambiente para totalmente sua execução.
+
+FAR 3.1
+	Pré-condições: Na última jornada houve uma colisão grave (high) e o veículo possui um passageiro, passenger.
+	Planos: O agente remove a crença de que há um passageiro, passenger, no veículo e recusa o termino da corrida atual, refuse_ride(drop_off).
+	Na sequência, move-se até o depósito, depot(X,Y), para que seja consertado, +!complete_journey (X, Y) [perform],
+	e termina sua execução.
+FAR 3.2
+	Pré-condições: Na última jornada houve uma colisão grave (high) e o veículo não possui um passageiro, passenger.
+	Planos: O agente recusa a corrida atual, refuse_ride(pick_up).Na sequência, move-se até o depósito, depot(X,Y), para que seja consertado, +!complete_journey (X, Y) [perform],
+	e termina sua execução.
+
+FAR 4
+	Pré-condições: Na última jornada houve uma colisão média (moderate) e o veículo controlado pelo agente não possui nenhum passageiro.
+	Neste cenário, mesmo após uma colisão média, o agente tenta terminar a corrida atual, caso haja um passageiro a bordo,
+	antes de voltar para o depósito.
+	Planos: O agente move-se até o depósito, depot(X,Y), para que seja consertado, +!complete_journey (X, Y) [perform],
+	e remove suas crenças referentes ao nível de dano causada ao veículo. E recusa a corrida atual caso o passageiro ainda não tenha sido pego.
+
+FAR 5
+		Pré-condições: Não há mais nenhuma corrida possível, no_possible_new_ride,
+e houve ao menos uma colisão leve nos percussos realizados pelo agente, damaged(low).
+		Plano: O agente move-se até o depósito, depot(X,Y), para que seja consertado, +!complete_journey (X, Y) [perform].
+		A seguir, é adiciona a crença que o agente realizou todas as corridas, done_all_rides.
+
+FAR 6 - Pré-condições: Não há mais nenhuma corrida possível, no_possible_new_ride,
+e não houve nenhuma colisão nos percussos realizados pelo agente, damaged(DAMAGE_LEVEL).
+		Plano: É adiciona a crença que o agente realizou todas as corridas, done_all_rides.
+*/
+
+// Get location of the car in the environment
+
+// FAR 1
++!finish_all_rides [achieve] : {~B at(X,Y)} <- localize, *at(GPS_X, GPS_Y);
+
+// FAR 2
++!finish_all_rides [achieve] : {B damaged(life_threatening)}
+								<- refuse_ride(car_unavailable), +done_all_rides;
+// FAR 3.1
++!finish_all_rides [achieve] : {B damaged(moderate), B depot(X,Y), B passenger}
+								<- refuse_ride(drop_off), -passenger, +!complete_journey (X, Y) [perform], park(depot), +done_all_rides;
+// FAR 3.2
++!finish_all_rides [achieve] : {B damaged(moderate), B depot(X,Y), ~B passenger}
+								<- refuse_ride(pick_up), +!complete_journey (X, Y) [perform], park(depot), +done_all_rides;
+
+// FAR 4
++!finish_all_rides [achieve] : {B no_possible_new_ride, B damaged(low), B depot(X,Y)}
+								<- message("Going back to Depot to be repaired."), +!complete_journey (X, Y) [perform], park(depot), +done_all_rides;
+
+// FAR 5
++!finish_all_rides [achieve] : {B no_possible_new_ride} <- +done_all_rides;
+
+
+
+// Get New Ride
++!finish_all_rides [achieve] : {~B ride_info} <- get_ride, *ride_info;
+
+// Verify it can reach destinations of the new ride before it tries to pick up the passanger
++!finish_all_rides [achieve] : {B pick_up(X,Y),  B obstacle(center, X,Y), ~B passenger}
+								<- refuse_ride(pick_up), -pick_up(X,Y), -ride_info;
++!finish_all_rides [achieve] : {B drop_off(X,Y), B obstacle(center, X,Y), ~B passenger}
+								<- refuse_ride(drop_off), -drop_off(X,Y), -ride_info;
+
+// ---------------------------------------------- Pick Up ----------------------------------------------
+
+// Current ride - Pick up
++!finish_all_rides [achieve] : {B current_pick_up(X,Y), ~B try_to_reach(X,Y), ~B passenger}
+								<- 	+!complete_journey (X,Y) [perform],
+									+try_to_reach(X,Y);
+
++!finish_all_rides [achieve] : {B current_pick_up(X,Y), B reach(X,Y), ~B passenger}
+								<- 	park(pick_up), +passenger,
+									-pick_up(X,Y), -try_to_reach(X,Y);
+
++!finish_all_rides [achieve] : {B current_pick_up(X,Y), ~B reach(X,Y), ~B passenger}
+								<- 	refuse_ride(pick_up), -pick_up(X,Y),
+									-try_to_reach(X,Y), -ride_info;
+
+
+// ---------------------------------------------- Drop Off ----------------------------------------------
+
+// Current ride - Drop off
++!finish_all_rides [achieve] : {B current_drop_off(X,Y), ~B try_to_reach(X,Y), B passenger}
+								<- 	+!complete_journey (X,Y) [perform],
+									+try_to_reach(X,Y);
+
+
++!finish_all_rides [achieve] : {B current_drop_off(X,Y), B reach(X,Y), B passenger}
+								<- 	park(drop_off), -passenger,
+									-drop_off(X,Y), -try_to_reach(X,Y), -ride_info;
+
++!finish_all_rides [achieve] : {B current_drop_off(X,Y), ~B reach(X,Y), B passenger}
+								<- 	refuse_ride(drop_off), -passenger, park(drop_off),
+									-drop_off(X,Y), -try_to_reach(X,Y), -ride_info;
+
+// ----------------------------------------------
+
++!clear_current_ride [perform] : {B pick_up(PK_X,PK_Y), B drop_off(DP_X,DP_Y)}
+								<- -pick_up(PK_X,PK_Y), -try_to_reach(PK_X,PK_Y), -drop_off(DP_X,DP_Y), -try_to_reach(P_X,DP_Y), -ride_info;
+
+// ---------------------------------------------- Complete Journey ----------------------------------------------
+
+// Go from current position to at(X,Y)
++!complete_journey (X,Y) [perform] : {B at(J_X,J_Y)} <- +!clear_travel_data [perform],
+													+from(F_X,F_Y), +destination(X,Y),
+													+moving, +!drive_to(X,Y) [achieve], -moving,
+													-from(F_X,F_Y), -destination(X,Y);
+
++!clear_travel_data [perform] : {True} <- 	+!clear_direction_data [perform],
+											-heading(north), -heading(south), -heading(east), -heading(west);
+
++!clear_adapt [perform] : {True} <- -adapt(north), -adapt(south), -adapt(east), -adapt(west);
+
+
+
+// --------------------------------------------- Get Route
+
++!get_route [perform] : {B destination(X,Y)} <- +!clear_travel_data [perform], compass(X, Y), *receive_direction;
+
++!clear_direction_data [perform] : {True}
+									<- +!clear_adapt [perform],
+										-north, -south, -east, -west,
+										-receive_direction;
+
+// ---------------------------------------------- Drive - !drive_to(X,Y) ----------------------------------------------
+
+/*
+
+DT XX -
+	Pré-condição: O agente está tentando adaptar sua rota adapt, mas não há como desviar dos obstáculos ao redor da sua localização atual, unavoidable_collision(AT_X, AT_Y).
+	Planos: O agente para de tentar desviar o obstáculos,
+	aciona o plano para escolher qual obstáculo que este deve colidir, +!choose_obstacle_collision [perform], e abandona o plano atual para adaptar sua rota.
+
+*/
+
+// Choose first direction to go
++!drive_to(X,Y) [achieve] : {~B north, ~B south, ~B east, ~B west} <- +!get_route [perform];
+
+// Decide where the car should head to
++!drive_to(X,Y) [achieve] : {~B heading(H), B north} <- +heading(north);
++!drive_to(X,Y) [achieve] : {~B heading(H), B south} <- +heading(south);
++!drive_to(X,Y) [achieve] : {~B heading(H), B east}  <- +heading(east);
++!drive_to(X,Y) [achieve] : {~B heading(H), B west}  <- +heading(west);
+
+// If car needs to turn
++!drive_to(X,Y) [achieve] : {B turn(north), B east}  <- -heading(north), +heading(east); // north to east
++!drive_to(X,Y) [achieve] : {B turn(north), B west}  <- -heading(north), +heading(west); // north to west
+
++!drive_to(X,Y) [achieve] : {B turn(south), B east}  <- -heading(south), +heading(east); // south to east
++!drive_to(X,Y) [achieve] : {B turn(south), B west}  <- -heading(south), +heading(west); // south to west
+
+// If car is blocked or can't reach destination, drop the goal
++!drive_to(X,Y) [achieve] : {B blocked} <- -blocked, -!drive_to(X,Y) [achieve];
++!drive_to(X,Y) [achieve] : {B obstacle(center, X, Y)} <- -!drive_to(X,Y) [achieve];
+
+// Wait to be in movement to drive
++!drive_to(X,Y) [achieve] : {~B moving} <- *moving;
+
+
+// Obstacle Avoidance
++!drive_to(X,Y) [achieve] : {B heading(D), B obstacle_ahead(D)}
+							<- -moving, +adapt, +!adapt_route(D,X,Y) [achieve];
+
++!drive_to(X,Y) [achieve] : {B heading(D), B known_route(D,X,Y)}
+							<- -moving, +adapt, +!adapt_route(D,X,Y) [achieve];
+
++!drive_to(X,Y) [achieve] : {B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y)}
+								<- 	-moving,
+									+!choose_obstacle_collision [perform];
+
+// When the car believes it can just move
++!drive_to(X,Y) [achieve] : {B heading(D), B can_adapt(D,X,Y)} <- +!drive_direction(D) [perform];
+
++!drive_to(X,Y) [achieve] : {True} <- print(normalDriveStuck), -!drive_to(X,Y) [achieve];
+
+
+// ---------------------------------------- Drive Direction ----------------------------------------
+
++!drive_direction(D) [perform] : { G drive_to(X, Y) [achieve] , B from(F_X,F_Y)}
+						<- -moving, drive(F_X,F_Y, D, X, Y);
+
+// ---------------------------------------- Choose Obstacle Collision  ----------------------------------------
+/*
+choose_obstacle_collision:
+Caso o agente se depare com uma situação onde a colisão é inevitável, o plano !choose_obstacle_collision é acionado.
+Têm como objetivo escolher o obstáculo que irá causar o menor dano ao veículo.
+A ordem dos planos segue do menor para o maior nível de estrago: leve, médio (moderate), grave (high), gravíssimo (life_threatening).
+Lembrando que na linguagem Gwendolen, é ordem dos planos importa, sendo assim, o primeiro plano que tiver suas pré-condições supridas será acionado.
+Neste caso, o agente nunca irá colidir com um obstáculo com o nível de dano médio, moderate,
+se existir algum outro obstáculo cujo dano é leve, low.
+
+COC 1
+	Pré-condição: Não há como desviar dos obstáculos ao redor da sua localização atual, unavoidable_collision(AT_X, AT_Y),
+	e existe uma direção tal que se o agente colidir o dano é leve (low), obstacle_damage(AT_X, AT_Y, DIRECTION, low);
+	Plano: O agente irá ativar o objetivo !colide_obstacle, informando a direção que deve colidir e que o dano será leve.
+
+COC 2
+	Pré-condição: Não há como desviar dos obstáculos ao redor da sua localização atual, unavoidable_collision(AT_X, AT_Y),
+	e existe uma direção tal que se o agente colidir o dano é médio (moderate), obstacle_damage(AT_X, AT_Y, DIRECTION, moderate);
+	Plano: O agente irá ativar o objetivo !colide_obstacle, informando a direção que deve colidir e que o dano será médio.
+	Nota: Esse plano não será ativado se existir algum outro obstáculo tal que o dano seja leve (low).
+
+COC 3
+	Pré-condição: Não há como desviar dos obstáculos ao redor da sua localização atual, unavoidable_collision(AT_X, AT_Y),
+	e existe uma direção tal que se o agente colidir o dano é grave (high), obstacle_damage(AT_X, AT_Y, DIRECTION, high);
+	Plano: O agente irá ativar o objetivo !colide_obstacle, informando a direção que deve colidir e que o dano será grave.
+	Nota: Esse plano não será ativado se existir algum outro obstáculo tal que o dano seja leve (low) ou médio (moderate).
+
+COC 4
+	Pré-condição: Não há como desviar dos obstáculos ao redor da sua localização atual, unavoidable_collision(AT_X, AT_Y),
+	e existe uma direção tal que se o agente colidir o dano é gravíssimo (life_threatening), obstacle_damage(AT_X, AT_Y, DIRECTION, life_threatening);
+	Plano: O agente irá ativar o objetivo !colide_obstacle, informando a direção que deve colidir e que o dano será gravíssimo.
+	Nota: Esse plano não será ativado se existir algum outro obstáculo tal que o dano seja leve (low), médio (moderate) ou grave (high).
+
+
+
+colide_obstacle(DIRECTION, DAMAGE_LEVEL): Este objetivo só é invoco por meio do objetivo choose_obstacle_collision, desta forma, não possui nenhuma pré-condição.
+Este possui um conjunto de tarefas comuns para quaisquer direção DIRECTION e nível de dano DAMAGE_LEVEL, pelos quais choose_obstacle_collision foi acionado.
+Seu plano consiste em: Adicionar crenças nas coordenadas ao redor da posição atual para que o agente não
+tente mover novamente para essa localização, uma vez que houve uma colisão a partir da mesma. Na sequência, o agente irá se mover para a
+direção DIRECTION  e adicionar na base de crenças o nível do estrago DAMAGE_LEVEL causado pela colisão do agente, damaged(DAMAGE_LEVEL).
+*/
+
+// COC 1
++!choose_obstacle_collision [perform] :
+								{B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y), B obstacle_damage(AT_X, AT_Y, DIRECTION, low)}
+								<- 	+!colide_obstacle(DIRECTION, low) [perform];
+
++!choose_obstacle_collision [perform] :
+								{B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y), B obstacle_damage(AT_X, AT_Y, DIRECTION, moderate)}
+								<- 	+!colide_obstacle(DIRECTION, moderate) [perform];
+
++!choose_obstacle_collision [perform] :
+								{B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y), B obstacle_damage(AT_X, AT_Y, DIRECTION, high)}
+								<- 	+!colide_obstacle(DIRECTION, high) [perform];
+
++!choose_obstacle_collision [perform] :
+								{B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y), B obstacle_damage(AT_X, AT_Y, DIRECTION, life_threatening)}
+								<- 	+!colide_obstacle(DIRECTION, life_threatening) [perform];
+
++!colide_obstacle(DIRECTION, DAMAGE_LEVEL) [perform] : {B from(F_X,F_Y), B at(AT_X, AT_Y), B destination(X,Y)}
+									<-	message(DAMAGE_LEVEL),
+										no_further_from(F_X,F_Y, AT_X, AT_Y, X,Y), *no_further(F_X,F_Y, AT_X, AT_Y, X,Y),
+										+damaged(DAMAGE_LEVEL),
+										+!drive_direction(DIRECTION) [perform], -moving,
+										+!get_route [perform], +moving;
+
+// ---------------------------------------- Obstacle Avoidance and adapt Route - !adapt_route(D, X, Y) [achieve]  ----------------------------------------
+/*
+
+O objetivo  +!adapt_route(D,X,Y) [achieve] têm como função adaptar a rota do agente para que seja realizado o desvio de obstáculos.
+D - Representa a direção para qual o agente deseja se mover
+X - Eixo X do destino final da rota atual do agente
+Y - Eixo Y do destino final da rota atual do agente
+
+
+
+AR 1 -
+	Pré-condição: O agente está tentando adaptar sua rota adapt, mas não há como desviar dos obstáculos ao redor da sua localização atual, unavoidable_collision(AT_X, AT_Y).
+	Planos: O agente para de tentar desviar o obstáculos,
+	aciona o plano para escolher qual obstáculo que este deve colidir, +!choose_obstacle_collision [perform], e abandona o plano atual para adaptar sua rota.
+
+*/
+
++!adapt_route(D,X,Y) [achieve] : {B adapt, B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y)}
+								<- 	-adapt,
+									+!choose_obstacle_collision [perform],
+									-!adapt_route(D,X,Y) [achieve];
+
+
++!adapt_route(D,X,Y) [achieve] : {B adapt, B obstacle_ahead(north), B obstacle_ahead(south), B obstacle_ahead(east), B obstacle_ahead(west)}
+							<- message("surrounded by obstacles"), +blocked, -!adapt_route(D,X,Y) [achieve];
+
++!adapt_route(D,X,Y) [achieve] : {B adapt, B can_adapt(D,X,Y)}
+							<- 	-adapt, //+adapt_from_to(F_X,F_Y, AT_X, AT_Y, D, X, Y),
+								+!drive_direction(D) [perform],
+								+!get_route [perform],
+								-!adapt_route(D,X,Y) [achieve];
+
+//+!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), ~B can_adapt(west,X,Y)}
+//							<- 	-!drive_to(X,Y) [achieve],
+//								-!adapt_route(D,X,Y) [achieve];
+
+
+// ---------------------------------------- HOLD THE SCROLL IS HERE  ----------------------------------------
+
++!adapt_route(D,X,Y) [achieve] : {~B adapt} <- *adapt;
+
+
+// ------------------------------ North or South - Avoid Simple  ------------------------------
+
+
+// Simple Belief North or South to East or West
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(east,X,Y), B east, B north_south}
+								<- -adapt, message("Simple Belief North or South to East"),
+								+!adapt_drive_direction(east,X,Y) [perform];
+
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(west,X,Y), B west, B north_south}
+								<- -adapt, message("Simple Belief North or South to West"),
+								+!adapt_drive_direction(west,X,Y) [perform];
+
+
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(east,X,Y), B north_south}
+									<- -adapt, message("Reroute North or South to East"),
+									+!adapt_drive_direction(east,X,Y) [perform];
+
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(west,X,Y), B north_south}
+									<- -adapt, message("Reroute North or South to West"),
+									+!adapt_drive_direction(west,X,Y) [perform];
+
+// ------------------------------ East or West - Avoid Simple  ------------------------------
+
+//Simple Belief East or West to North or South
+// If it came from North, adapt South. And vice-versa
+
++!adapt_route(D,X,Y) [achieve] : {B north, B can_adapt_route(north,X,Y), B east_west}
+									<- -adapt,  message("Simple Belief East or West to North"), +!adapt_drive_direction(north,X,Y) [perform];
++!adapt_route(D,X,Y) [achieve] : {B south, B can_adapt_route(south,X,Y), B east_west}
+									<- -adapt,  message("Simple Belief East or West to South"), +!adapt_drive_direction(south,X,Y) [perform];
+
+
+
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(north,X,Y), B east_west}
+									<- -adapt, message("Reroute East or West to North"), +!adapt_drive_direction(north,X,Y) [perform];
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(south,X,Y), B east_west}
+									<- -adapt, message("Reroute East or West to South"), +!adapt_drive_direction(south,X,Y) [perform];
+
+
+
+// ------------------------------------------------------------		 Go Back
++!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
+									<- -adapt,
+										message("Go back west"),
+										no_further_from(F_X,F_Y, AT_X, AT_Y, X,Y), *no_further(F_X,F_Y, AT_X, AT_Y, X,Y),
+										+!clear_adapt [perform],
+										-moving, drive(F_X,F_Y, west, X, Y),
+										+adapt;
+
++!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
+									<- -adapt,
+										message("Go back east"),
+										no_further_from(F_X,F_Y, AT_X, AT_Y, X,Y), *no_further(F_X,F_Y, AT_X, AT_Y, X,Y),
+										+!clear_adapt [perform],
+										-moving, drive(F_X,F_Y, east, X, Y),
+										+adapt;
+
++!adapt_route(D,X,Y) [achieve] : {B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
+									<- -adapt,
+										message("Go back north"),
+										no_further_from(F_X,F_Y, AT_X, AT_Y, X,Y), *no_further(F_X,F_Y, AT_X, AT_Y, X,Y),
+										+!clear_adapt [perform],
+										-moving, drive(F_X,F_Y, north, X, Y),
+										+adapt;
+
++!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
+									<- -adapt,
+										message("Go back south"),
+										no_further_from(F_X,F_Y, AT_X, AT_Y, X,Y), *no_further(F_X,F_Y, AT_X, AT_Y, X,Y),
+										+!clear_adapt [perform],
+										-moving, drive(F_X,F_Y, south, X, Y),
+										+adapt;
+
+
+// ------------------------------ Avoid Obstacles while re-routing  ------------------------------
+
+//Reroute the reroute from East or West to North
++!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), B can_adapt(south,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
+									<- -adapt,
+										message("EW Cant keep going north"),
+										no_further_from(F_X,F_Y,AT_X, AT_Y, X, Y), *no_further(F_X,F_Y,AT_X, AT_Y, X, Y),
+										+!clear_adapt [perform],
+										+!drive_direction(south) [perform],
+										+adapt;
+
++!adapt_route(D,X,Y) [achieve] : {~B can_adapt(south,X,Y), B can_adapt(north,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
+									<- -adapt,
+										message("EW Cant keep going south"),
+										no_further_from(F_X,F_Y,AT_X, AT_Y, X, Y), *no_further(F_X,F_Y,AT_X, AT_Y, X, Y),
+										+!clear_adapt [perform],
+										+!drive_direction(north) [perform],
+										+adapt;
+
++!adapt_route(D,X,Y) [achieve] : {~B can_adapt(east,X,Y), B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
+									<- -adapt,
+										message("EW Cant keep going east"),
+										no_further_from(F_X,F_Y,AT_X, AT_Y, X, Y), *no_further(F_X,F_Y,AT_X, AT_Y, X, Y),
+										+!clear_adapt [perform],
+										+!drive_direction(west) [perform],
+										+adapt;
+
++!adapt_route(D,X,Y) [achieve] : {~B can_adapt(west,X,Y), B can_adapt(east,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
+									<- -adapt,
+										message("EW Cant keep going west"),
+										no_further_from(F_X,F_Y,AT_X, AT_Y, X, Y), *no_further(F_X,F_Y,AT_X, AT_Y, X, Y),
+										+!clear_adapt [perform],
+										+!drive_direction(east) [perform],
+										+adapt;
+
+
+// ------------------------------------------------------------
++!adapt_route(D,X,Y) [achieve] : {B at(AT_X, AT_Y)} <-
+					message("Missing Adapt Route to reach destination"),
+					+missing_adapt_route(AT_X, AT_Y, D, X, Y),
+					+blocked, -!adapt_route(D,X,Y) [achieve];
+
+// --------------------------------------------------------------------------------
+
++!adapt_drive_direction(A_D,X,Y) [perform] : {B at(AT_X,AT_Y), B from(F_X,F_Y)}
+							<- 	-adapt, +adapt(A_D), //+adapt_from_to(F_X,F_Y,AT_X, AT_Y, A_D, X, Y), message(A_D),
+								drive(F_X,F_Y, A_D, X, Y), *at(NEW_X, NEW_Y),
+								+adapt;
+
+
+// ---------------------------------------- obstacle(D, X,Y)  ----------------------------------------
+
+/*
+Este evento é desencadedo quando o agente adquire a crença de que há um obstáculo em alguma coordenada (X,Y), nas seguintes condições:
+	OB 1
+		Pré-condição: Se a coordenada X,Y for o ponto de pegada do passageiro atual, pick_up(X,Y).
+		Plano: O agente abandona qualquer plano envolvendo seu trajeto atual, !drive_to(X,Y) [achieve] e !adapt_route(D,X,Y) [achieve].
+	OB 2
+		Pré-condição: Se a coordenada X,Y for o ponto de destino do passageiro atual, drop_off(X,Y).
+		Plano: O agente abandona qualquer plano envolvendo seu trajeto atual, !drive_to(X,Y) [achieve] e !adapt_route(D,X,Y) [achieve].
+
+Vale ressaltar que ambos os planos são ativados caso o obstáculo não seja temporário.
+Este lógica é motivada que quando há uma colisão, obstáculos temporários são adicionados na base de crenças do agente.
+*/
+// OB 1
++obstacle(center, AT_X, AT_Y) : {B pick_up(AT_X, AT_Y), ~B temp_obstacle(AT_X, AT_Y)} <- -!drive_to(X, Y) [achieve], -!adapt_route(D, X, Y) [achieve];
++obstacle(center, AT_X, AT_Y) : {B drop_off(AT_X, AT_Y), ~B temp_obstacle(AT_X, AT_Y)} <- -!drive_to(X, Y) [achieve], -!adapt_route(D, X, Y) [achieve];
+
+// ---------------------------------------- at(X,Y)  ----------------------------------------
+
++at(AT_X,AT_Y) : {~B obstacle(center, AT_X,AT_Y)} <- +moving;
+
+
+// ---------------------------------------- Control Emergencies - !control_emergency (X,Y)  ----------------------------------------
+
+/*
+Planos para controlar emêrgencias.
+CE1
+	Pré-condições: Quando o agente acredita que está em uma coordenada AT_X,AT_Y, at(AT_X,AT_Y), que possui um obstáculo localizado em si,
+	obstacle(center, AT_X,AT_Y).
+	Plano: O agente para de se mover, adiciona uma nova crença referente a sua colisão na posição atual, crashed(AT_X,AT_Y),
+e ativa o plano de controle de emergências, !control_emergency (AT_X,AT_Y) [achieve].
+
+CE2
+	Pré-condições: Caso o agente acredite que colidiu, crashed(AT_X,AT_Y), mas não está em estado de alerta, alert_state.
+	Plano: O agente executa uma ação para chamar emergência, call_emergency(AT_X,AT_Y), e
+entra em modo de espera até a emergência chegar, emergency(AT_X,AT_Y). E por fim, entra em estado de alerta.
+
+CE3 -
+	Pré-condições: O agente acredita que está sendo atendido pela emergência, emergency(AT_X,AT_Y), e está em estado de alerta,  alert_state,
+e o nível de dano causado pela colisão é leve, damaged(low).
+	Plano: É executada a ação get_assistence(AT_X,AT_Y) para consertar o veículo no local e tratar de possíveis ferimentos dos passageiros.
+	O agente espera a assistência ser concluída, *assisted(AT_X,AT_Y), antes de prosseguir seu trajeto.
+
+CE4
+	Pré-condições: O agente acredita que está sendo atendido pela emergência, emergency(AT_X,AT_Y), e está em estado de alerta,  alert_state,
+e o nível de dano causado pela colisão é grave, (moderate).
+	Plano: É executada a ação get_assistence(AT_X,AT_Y) para consertar o veículo no local e
+	o agente espera o conserto necessário ser realizado, *assisted(AT_X,AT_Y).
+	Nessa cenário, o agente abandona quais planos envolvendo seu trajeto atual, !drive_to(X,Y) [achieve] e !adapt_route(D,X,Y) [achieve].
+
+CE5
+	Pré-condições: O agente acredita que está sendo atendido pela emergência, emergency(AT_X,AT_Y), e está em estado de alerta,  alert_state,
+e o nível de dano causado pela colisão é grave, (high).
+	Plano: O agente abandona qualquer plano envolvendo seu trajeto atual, !drive_to(X,Y) [achieve] e !adapt_route(D,X,Y) [achieve].
+
+
+*/
+
+// CE 1
++at(AT_X,AT_Y) : {B obstacle(center, AT_X,AT_Y)} <- -moving, -adapt, +crashed(AT_X,AT_Y), +!control_emergency (AT_X,AT_Y) [achieve];
+
+// CE 2
++!control_emergency (AT_X,AT_Y) [achieve] : {B crashed(AT_X,AT_Y), ~B alert_state}
+	<- call_emergency(AT_X,AT_Y), *emergency(AT_X,AT_Y), +alert_state;
+
+// CE 3
++!control_emergency (AT_X,AT_Y) [achieve] : {B emergency(AT_X,AT_Y), B alert_state, B damaged(low)}
+	<-  get_assistence(AT_X,AT_Y), *assisted(AT_X,AT_Y), -alert_state, -crashed(AT_X,AT_Y), +moving, +adapt;
+
+// CE 4
++!control_emergency (AT_X,AT_Y) [achieve] : {B emergency(AT_X,AT_Y), B alert_state, B damaged(moderate)}
+	<-  get_assistence(AT_X,AT_Y), *assisted(AT_X,AT_Y), message(assisted), -alert_state, -crashed(AT_X,AT_Y), -!adapt_route(D,X,Y) [achieve], -!drive_to(X,Y) [achieve];
+
+// CE 5
++!control_emergency (AT_X,AT_Y) [achieve] : {B emergency(AT_X,AT_Y), B alert_state, B damaged(high)}
+	<-  -!drive_to(X,Y) [achieve], -!adapt_route(D,X,Y) [achieve], -crashed(AT_X,AT_Y);

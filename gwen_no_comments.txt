@@ -1,9 +1,9 @@
 GWENDOLEN
 
-:name: vehicle
+:name: car
 
 :Initial Beliefs:
-name(vehicle)
+name(car)
 
 :Reasoning Rules:
 
@@ -68,74 +68,72 @@ control_emergency (X,Y) :- ~crashed(X,Y);
 finish_all_rides [achieve]
 
 :Plans:
-
-+!finish_all_rides [achieve] : {~B at(X,Y)} <- localize, *at(LX, LY);
-
-+!finish_all_rides [achieve] : {B damaged(life_threatening)} 
-								<- refuse_ride(car_unavailable), +done_all_rides; 
-+!finish_all_rides [achieve] : {B damaged(moderate), B depot(X,Y), B passenger} 
-								<- refuse_ride(drop_off), -passenger, +!complete_journey (X, Y) [perform], park(depot), +done_all_rides; 
-+!finish_all_rides [achieve] : {B damaged(moderate), B depot(X,Y), ~B passenger} 
-								<- refuse_ride(pick_up), +!complete_journey (X, Y) [perform], park(depot), +done_all_rides; 
-+!finish_all_rides [achieve] : {B no_possible_new_ride, B damaged(low), B depot(X,Y)} 
++!finish_all_rides [achieve] : {~B at(X,Y)} <- localize, *at(GPS_X, GPS_Y);
++!finish_all_rides [achieve] : {B damaged(life_threatening)}
+								<- refuse_ride(car_unavailable), +done_all_rides;
++!finish_all_rides [achieve] : {B damaged(moderate), B depot(X,Y), B passenger}
+								<- refuse_ride(drop_off), -passenger, +!complete_journey (X, Y) [perform], park(depot), +done_all_rides;
++!finish_all_rides [achieve] : {B damaged(moderate), B depot(X,Y), ~B passenger}
+								<- refuse_ride(pick_up), +!complete_journey (X, Y) [perform], park(depot), +done_all_rides;
++!finish_all_rides [achieve] : {B no_possible_new_ride, B damaged(low), B depot(X,Y)}
 								<- message("Going back to Depot to be repaired."), +!complete_journey (X, Y) [perform], park(depot), +done_all_rides;
 +!finish_all_rides [achieve] : {B no_possible_new_ride} <- +done_all_rides;
 
 
 +!finish_all_rides [achieve] : {~B ride_info} <- get_ride, *ride_info;
-	
-+!finish_all_rides [achieve] : {B pick_up(X,Y),  B obstacle(center, X,Y), ~B passenger} 
+
++!finish_all_rides [achieve] : {B pick_up(X,Y),  B obstacle(center, X,Y), ~B passenger}
 								<- refuse_ride(pick_up), -pick_up(X,Y), -ride_info;
-+!finish_all_rides [achieve] : {B drop_off(X,Y), B obstacle(center, X,Y), ~B passenger} 
++!finish_all_rides [achieve] : {B drop_off(X,Y), B obstacle(center, X,Y), ~B passenger}
 								<- refuse_ride(drop_off), -drop_off(X,Y), -ride_info;
 
 +!finish_all_rides [achieve] : {B current_pick_up(X,Y), ~B try_to_reach(X,Y), ~B passenger}
-								<- 	+!complete_journey (X,Y) [perform], 
-									+try_to_reach(X,Y);	
-																	
+								<- 	+!complete_journey (X,Y) [perform],
+									+try_to_reach(X,Y);
+
 +!finish_all_rides [achieve] : {B current_pick_up(X,Y), B reach(X,Y), ~B passenger}
-								<- 	park(pick_up), +passenger, 
-									-pick_up(X,Y), -try_to_reach(X,Y);	
+								<- 	park(pick_up), +passenger,
+									-pick_up(X,Y), -try_to_reach(X,Y);
 
 +!finish_all_rides [achieve] : {B current_pick_up(X,Y), ~B reach(X,Y), ~B passenger}
 								<- 	refuse_ride(pick_up), -pick_up(X,Y),
-									-try_to_reach(X,Y), -ride_info;				
-								
-								
+									-try_to_reach(X,Y), -ride_info;
+
+
 +!finish_all_rides [achieve] : {B current_drop_off(X,Y), ~B try_to_reach(X,Y), B passenger}
-								<- 	+!complete_journey (X,Y) [perform], 
+								<- 	+!complete_journey (X,Y) [perform],
 									+try_to_reach(X,Y);
 
-								
+
 +!finish_all_rides [achieve] : {B current_drop_off(X,Y), B reach(X,Y), B passenger}
-								<- 	park(drop_off), -passenger, 
+								<- 	park(drop_off), -passenger,
 									-drop_off(X,Y), -try_to_reach(X,Y), -ride_info;
-									
+
 +!finish_all_rides [achieve] : {B current_drop_off(X,Y), ~B reach(X,Y), B passenger}
-								<- 	refuse_ride(drop_off), -passenger, park(drop_off), 
-									-drop_off(X,Y), -try_to_reach(X,Y), -ride_info;	
-					
-						
-+!clear_current_ride [perform] : {B pick_up(PK_X,PK_Y), B drop_off(DP_X,DP_Y)} 
+								<- 	refuse_ride(drop_off), -passenger, park(drop_off),
+									-drop_off(X,Y), -try_to_reach(X,Y), -ride_info;
+
+
++!clear_current_ride [perform] : {B pick_up(PK_X,PK_Y), B drop_off(DP_X,DP_Y)}
 								<- -pick_up(PK_X,PK_Y), -try_to_reach(PK_X,PK_Y), -drop_off(DP_X,DP_Y), -try_to_reach(P_X,DP_Y), -ride_info;
 
-+!complete_journey (X,Y) [perform] : {B at(J_X,J_Y)} <- +!clear_travel_data [perform], 
++!complete_journey (X,Y) [perform] : {B at(J_X,J_Y)} <- +!clear_travel_data [perform],
 													+from(F_X,F_Y), +destination(X,Y),
-													+moving, +!drive_to(X,Y) [achieve], -moving, 
+													+moving, +!drive_to(X,Y) [achieve], -moving,
 													-from(F_X,F_Y), -destination(X,Y);
 
 +!clear_travel_data [perform] : {True} <- 	+!clear_direction_data [perform],
 											-heading(north), -heading(south), -heading(east), -heading(west);
-										
-+!clear_adapt [perform] : {True} <- -adapt(north), -adapt(south), -adapt(east), -adapt(west);
-		
 
-								
++!clear_adapt [perform] : {True} <- -adapt(north), -adapt(south), -adapt(east), -adapt(west);
+
+
+
 +!get_route [perform] : {B destination(X,Y)} <- +!clear_travel_data [perform], compass(X, Y), *receive_direction;
 
-+!clear_direction_data [perform] : {True} 
++!clear_direction_data [perform] : {True}
 									<- +!clear_adapt [perform],
-										-north, -south, -east, -west, 
+										-north, -south, -east, -west,
 										-receive_direction;
 
 +!drive_to(X,Y) [achieve] : {~B north, ~B south, ~B east, ~B west} <- +!get_route [perform];
@@ -145,52 +143,52 @@ finish_all_rides [achieve]
 +!drive_to(X,Y) [achieve] : {~B heading(H), B east}  <- +heading(east);
 +!drive_to(X,Y) [achieve] : {~B heading(H), B west}  <- +heading(west);
 
-+!drive_to(X,Y) [achieve] : {B turn(north), B east}  <- -heading(north), +heading(east); 
-+!drive_to(X,Y) [achieve] : {B turn(north), B west}  <- -heading(north), +heading(west); 
++!drive_to(X,Y) [achieve] : {B turn(north), B east}  <- -heading(north), +heading(east);
++!drive_to(X,Y) [achieve] : {B turn(north), B west}  <- -heading(north), +heading(west);
 
 +!drive_to(X,Y) [achieve] : {B turn(south), B east}  <- -heading(south), +heading(east);
-+!drive_to(X,Y) [achieve] : {B turn(south), B west}  <- -heading(south), +heading(west); 
++!drive_to(X,Y) [achieve] : {B turn(south), B west}  <- -heading(south), +heading(west);
 
-+!drive_to(X,Y) [achieve] : {B blocked} <- -blocked, -!drive_to(X,Y) [achieve];	
-+!drive_to(X,Y) [achieve] : {B obstacle(center, X, Y)} <- -!drive_to(X,Y) [achieve];	
++!drive_to(X,Y) [achieve] : {B blocked} <- -blocked, -!drive_to(X,Y) [achieve];
++!drive_to(X,Y) [achieve] : {B obstacle(center, X, Y)} <- -!drive_to(X,Y) [achieve];
 
-+!drive_to(X,Y) [achieve] : {~B moving} <- *moving;		
++!drive_to(X,Y) [achieve] : {~B moving} <- *moving;
 
 +!drive_to(X,Y) [achieve] : {B heading(D), B obstacle_ahead(D)}
 							<- -moving, +adapt, +!adapt_route(D,X,Y) [achieve];
-							
+
 +!drive_to(X,Y) [achieve] : {B heading(D), B known_route(D,X,Y)}
 							<- -moving, +adapt, +!adapt_route(D,X,Y) [achieve];
 
-+!drive_to(X,Y) [achieve] : {B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y)} 
++!drive_to(X,Y) [achieve] : {B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y)}
 								<- 	-moving,
-									+!choose_obstacle_collision [perform];						
-							
-+!drive_to(X,Y) [achieve] : {B heading(D), B can_adapt(D,X,Y)} <- +!drive_direction(D) [perform]; 
+									+!choose_obstacle_collision [perform];
+
++!drive_to(X,Y) [achieve] : {B heading(D), B can_adapt(D,X,Y)} <- +!drive_direction(D) [perform];
 
 +!drive_to(X,Y) [achieve] : {True} <- print(normalDriveStuck), -!drive_to(X,Y) [achieve];
 
 
-+!drive_direction(D) [perform] : { G drive_to(X, Y) [achieve] , B from(F_X,F_Y)} 
++!drive_direction(D) [perform] : { G drive_to(X, Y) [achieve] , B from(F_X,F_Y)}
 						<- -moving, drive(F_X,F_Y, D, X, Y);
 
-+!choose_obstacle_collision [perform] : 
-								{B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y), B obstacle_damage(AT_X, AT_Y, DIRECTION, low)} 
++!choose_obstacle_collision [perform] :
+								{B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y), B obstacle_damage(AT_X, AT_Y, DIRECTION, low)}
 								<- 	+!colide_obstacle(DIRECTION, low) [perform];
-									
-+!choose_obstacle_collision [perform] : 
-								{B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y), B obstacle_damage(AT_X, AT_Y, DIRECTION, moderate)} 
+
++!choose_obstacle_collision [perform] :
+								{B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y), B obstacle_damage(AT_X, AT_Y, DIRECTION, moderate)}
 								<- 	+!colide_obstacle(DIRECTION, moderate) [perform];
-									
-+!choose_obstacle_collision [perform] : 
-								{B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y), B obstacle_damage(AT_X, AT_Y, DIRECTION, high)} 
+
++!choose_obstacle_collision [perform] :
+								{B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y), B obstacle_damage(AT_X, AT_Y, DIRECTION, high)}
 								<- 	+!colide_obstacle(DIRECTION, high) [perform];
-									
-+!choose_obstacle_collision [perform] : 
-								{B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y), B obstacle_damage(AT_X, AT_Y, DIRECTION, life_threatening)} 
+
++!choose_obstacle_collision [perform] :
+								{B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y), B obstacle_damage(AT_X, AT_Y, DIRECTION, life_threatening)}
 								<- 	+!colide_obstacle(DIRECTION, life_threatening) [perform];
-									
-+!colide_obstacle(DIRECTION, DAMAGE_LEVEL) [perform] : {B from(F_X,F_Y), B at(AT_X, AT_Y), B destination(X,Y)} 
+
++!colide_obstacle(DIRECTION, DAMAGE_LEVEL) [perform] : {B from(F_X,F_Y), B at(AT_X, AT_Y), B destination(X,Y)}
 									<-	message(DAMAGE_LEVEL),
 										no_further_from(F_X,F_Y, AT_X, AT_Y, X,Y), *no_further(F_X,F_Y, AT_X, AT_Y, X,Y),
 										+damaged(DAMAGE_LEVEL),
@@ -198,48 +196,48 @@ finish_all_rides [achieve]
 										+!get_route [perform], +moving;
 
 
-+!adapt_route(D,X,Y) [achieve] : {B adapt, B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y)} 
-								<- 	-adapt, 
++!adapt_route(D,X,Y) [achieve] : {B adapt, B at(AT_X, AT_Y), B unavoidable_collision(AT_X, AT_Y)}
+								<- 	-adapt,
 									+!choose_obstacle_collision [perform],
 									-!adapt_route(D,X,Y) [achieve];
 
 
 +!adapt_route(D,X,Y) [achieve] : {B adapt, B obstacle_ahead(north), B obstacle_ahead(south), B obstacle_ahead(east), B obstacle_ahead(west)}
 							<- message("surrounded by obstacles"), +blocked, -!adapt_route(D,X,Y) [achieve];
-									
+
 +!adapt_route(D,X,Y) [achieve] : {B adapt, B can_adapt(D,X,Y)}
-							<- 	-adapt, //+adapt_from_to(F_X,F_Y, AT_X, AT_Y, D, X, Y), 
+							<- 	-adapt, //+adapt_from_to(F_X,F_Y, AT_X, AT_Y, D, X, Y),
 								+!drive_direction(D) [perform],
-								+!get_route [perform], 
+								+!get_route [perform],
 								-!adapt_route(D,X,Y) [achieve];
-								
+
 
 +!adapt_route(D,X,Y) [achieve] : {~B adapt} <- *adapt;
 
-+!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(east,X,Y), B east, B north_south} 
-								<- -adapt, message("Simple Belief North or South to East"), 
-								+!adapt_drive_direction(east,X,Y) [perform]; 
-								
-+!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(west,X,Y), B west, B north_south} 
-								<- -adapt, message("Simple Belief North or South to West"), 
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(east,X,Y), B east, B north_south}
+								<- -adapt, message("Simple Belief North or South to East"),
+								+!adapt_drive_direction(east,X,Y) [perform];
+
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(west,X,Y), B west, B north_south}
+								<- -adapt, message("Simple Belief North or South to West"),
 								+!adapt_drive_direction(west,X,Y) [perform];
-							
-										
-+!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(east,X,Y), B north_south} 
-									<- -adapt, message("Reroute North or South to East"), 
-									+!adapt_drive_direction(east,X,Y) [perform]; 
-									
+
+
++!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(east,X,Y), B north_south}
+									<- -adapt, message("Reroute North or South to East"),
+									+!adapt_drive_direction(east,X,Y) [perform];
+
 +!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(west,X,Y), B north_south}
-									<- -adapt, message("Reroute North or South to West"), 
-									+!adapt_drive_direction(west,X,Y) [perform];  
-									
-								
+									<- -adapt, message("Reroute North or South to West"),
+									+!adapt_drive_direction(west,X,Y) [perform];
+
+
 +!adapt_route(D,X,Y) [achieve] : {B north, B can_adapt_route(north,X,Y), B east_west}
 									<- -adapt,  message("Simple Belief East or West to North"), +!adapt_drive_direction(north,X,Y) [perform];
 +!adapt_route(D,X,Y) [achieve] : {B south, B can_adapt_route(south,X,Y), B east_west}
 									<- -adapt,  message("Simple Belief East or West to South"), +!adapt_drive_direction(south,X,Y) [perform];
 
-	
+
 
 +!adapt_route(D,X,Y) [achieve] : {B can_adapt_route(north,X,Y), B east_west}
 									<- -adapt, message("Reroute East or West to North"), +!adapt_drive_direction(north,X,Y) [perform];
@@ -253,33 +251,33 @@ finish_all_rides [achieve]
 										message("Go back west"),
 										no_further_from(F_X,F_Y, AT_X, AT_Y, X,Y), *no_further(F_X,F_Y, AT_X, AT_Y, X,Y),
 										+!clear_adapt [perform],
-										-moving, drive(F_X,F_Y, west, X, Y), 
+										-moving, drive(F_X,F_Y, west, X, Y),
 										+adapt;
-										
+
 +!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
 									<- -adapt,
 										message("Go back east"),
 										no_further_from(F_X,F_Y, AT_X, AT_Y, X,Y), *no_further(F_X,F_Y, AT_X, AT_Y, X,Y),
 										+!clear_adapt [perform],
-										-moving, drive(F_X,F_Y, east, X, Y), 
+										-moving, drive(F_X,F_Y, east, X, Y),
 										+adapt;
-										
+
 +!adapt_route(D,X,Y) [achieve] : {B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
 									<- -adapt,
 										message("Go back north"),
 										no_further_from(F_X,F_Y, AT_X, AT_Y, X,Y), *no_further(F_X,F_Y, AT_X, AT_Y, X,Y),
 										+!clear_adapt [perform],
-										-moving, drive(F_X,F_Y, north, X, Y), 
+										-moving, drive(F_X,F_Y, north, X, Y),
 										+adapt;
-										
+
 +!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), ~B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
 									<- -adapt,
 										message("Go back south"),
 										no_further_from(F_X,F_Y, AT_X, AT_Y, X,Y), *no_further(F_X,F_Y, AT_X, AT_Y, X,Y),
 										+!clear_adapt [perform],
-										-moving, drive(F_X,F_Y, south, X, Y), 
+										-moving, drive(F_X,F_Y, south, X, Y),
 										+adapt;
-										
+
 +!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), B can_adapt(south,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
 									<- -adapt,
 										message("EW Cant keep going north"),
@@ -287,13 +285,13 @@ finish_all_rides [achieve]
 										+!clear_adapt [perform],
 										+!drive_direction(south) [perform],
 										+adapt;
-										
+
 +!adapt_route(D,X,Y) [achieve] : {~B can_adapt(south,X,Y), B can_adapt(north,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
 									<- -adapt,
 										message("EW Cant keep going south"),
 										no_further_from(F_X,F_Y,AT_X, AT_Y, X, Y), *no_further(F_X,F_Y,AT_X, AT_Y, X, Y),
 										+!clear_adapt [perform],
-										+!drive_direction(north) [perform], 
+										+!drive_direction(north) [perform],
 										+adapt;
 
 +!adapt_route(D,X,Y) [achieve] : {~B can_adapt(east,X,Y), B can_adapt(west,X,Y), B at(AT_X, AT_Y), B from(F_X,F_Y)}
@@ -310,18 +308,18 @@ finish_all_rides [achieve]
 										no_further_from(F_X,F_Y,AT_X, AT_Y, X, Y), *no_further(F_X,F_Y,AT_X, AT_Y, X, Y),
 										+!clear_adapt [perform],
 										+!drive_direction(east) [perform],
-										+adapt;									
-								
+										+adapt;
+
 +!adapt_route(D,X,Y) [achieve] : {B at(AT_X, AT_Y)} <-
-					message("Missing Adapt Route to reach destination"), 
+					message("Missing Adapt Route to reach destination"),
 					+missing_adapt_route(AT_X, AT_Y, D, X, Y),
 					+blocked, -!adapt_route(D,X,Y) [achieve];
-					
-+!adapt_drive_direction(A_D,X,Y) [perform] : {B at(AT_X,AT_Y), B from(F_X,F_Y)} 
+
++!adapt_drive_direction(A_D,X,Y) [perform] : {B at(AT_X,AT_Y), B from(F_X,F_Y)}
 							<- 	-adapt, +adapt(A_D), //+adapt_from_to(F_X,F_Y,AT_X, AT_Y, A_D, X, Y), message(A_D),
-								drive(F_X,F_Y, A_D, X, Y), *at(NEW_X, NEW_Y), 
+								drive(F_X,F_Y, A_D, X, Y), *at(NEW_X, NEW_Y),
 								+adapt;
-					
+
 
 +obstacle(center, AT_X, AT_Y) : {B pick_up(AT_X, AT_Y), ~B temp_obstacle(AT_X, AT_Y)} <- -!drive_to(X, Y) [achieve], -!adapt_route(D, X, Y) [achieve];
 +obstacle(center, AT_X, AT_Y) : {B drop_off(AT_X, AT_Y), ~B temp_obstacle(AT_X, AT_Y)} <- -!drive_to(X, Y) [achieve], -!adapt_route(D, X, Y) [achieve];
@@ -331,15 +329,15 @@ finish_all_rides [achieve]
 
 +at(AT_X,AT_Y) : {B obstacle(center, AT_X,AT_Y)} <- -moving, -adapt, +crashed(AT_X,AT_Y), +!control_emergency (AT_X,AT_Y) [achieve];
 
-+!control_emergency (AT_X,AT_Y) [achieve] : {B crashed(AT_X,AT_Y), ~B alert_state} 
++!control_emergency (AT_X,AT_Y) [achieve] : {B crashed(AT_X,AT_Y), ~B alert_state}
 	<- call_emergency(AT_X,AT_Y), *emergency(AT_X,AT_Y), +alert_state;
 
-+!control_emergency (AT_X,AT_Y) [achieve] : {B emergency(AT_X,AT_Y), B alert_state, B damaged(low)} 
++!control_emergency (AT_X,AT_Y) [achieve] : {B emergency(AT_X,AT_Y), B alert_state, B damaged(low)}
 	<-  get_assistence(AT_X,AT_Y), *assisted(AT_X,AT_Y), -alert_state, -crashed(AT_X,AT_Y), +moving, +adapt;
 
-+!control_emergency (AT_X,AT_Y) [achieve] : {B emergency(AT_X,AT_Y), B alert_state, B damaged(moderate)} 
++!control_emergency (AT_X,AT_Y) [achieve] : {B emergency(AT_X,AT_Y), B alert_state, B damaged(moderate)}
 	<-  get_assistence(AT_X,AT_Y), *assisted(AT_X,AT_Y), message(assisted), -alert_state, -crashed(AT_X,AT_Y), -!adapt_route(D,X,Y) [achieve], -!drive_to(X,Y) [achieve];
-	
-+!control_emergency (AT_X,AT_Y) [achieve] : {B emergency(AT_X,AT_Y), B alert_state, B damaged(high)} 
+
++!control_emergency (AT_X,AT_Y) [achieve] : {B emergency(AT_X,AT_Y), B alert_state, B damaged(high)}
 	<-  -!drive_to(X,Y) [achieve], -!adapt_route(D,X,Y) [achieve], -crashed(AT_X,AT_Y);
 	

@@ -2,4 +2,6 @@
 
 target = ail.util.AJPF_w_AIL
 
-target.args = ${mcapl}/main/_005_dont_crash/autonomous_car.ail,${mcapl}/main/_005_dont_crash/autonomous_car.psl,2
+target.args = ${mcapl}/main/_005_dont_crash/autonomous_car.ail,${mcapl}/main/_005_dont_crash/autonomous_car.psl,1
+
+ajpf.transition_every_reasoning_cycle = false
