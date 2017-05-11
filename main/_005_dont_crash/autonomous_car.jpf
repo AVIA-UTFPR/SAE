@@ -4,4 +4,12 @@ target = ail.util.AJPF_w_AIL
 
 target.args = ${mcapl}/main/_005_dont_crash/autonomous_car.ail,${mcapl}/main/_005_dont_crash/autonomous_car.psl,1
 
-ajpf.transition_every_reasoning_cycle = false
+log.info = ajpf.psl.buchi.BuchiAutomaton
+
+//listener+=,.listener.ExecTracker
+//et.print_insn=false
+//et.show_shared=false
+
+
+
+//log.info = ail.mas.DefaultEnvironment

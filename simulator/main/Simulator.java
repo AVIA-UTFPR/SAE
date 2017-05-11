@@ -28,7 +28,7 @@ public class Simulator extends JComponent{
 	private int width = 800;
 	private int height = 800;
 	
-	private int gridSize = 10;
+	private int gridSize = 5;
 	private int gridAmplifier = 50;
 
 	private Coordinate car = new Coordinate(0, 0); // Coordenada onde o agente está localizado.
@@ -45,10 +45,8 @@ public class Simulator extends JComponent{
 	private Coordinate dropOff = new Coordinate(gridSize, gridSize); // Indica a coordenada que é o destino da corrida atual.
 	private boolean canDropOff = true; // Informa se é possível chegar na coordenada dropOff.
 	
-
-	
-	
 	// Definição das cores para cada nível de dano que um obstáculo pode causar.
+
 	private Color high = new Color(255,0,0);
 	private Color moderate = new Color(255,102,102);
 	private Color low = new Color(255,204,204);

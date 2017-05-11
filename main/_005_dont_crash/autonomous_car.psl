@@ -1,3 +1,18 @@
-1: [] B(vehicle, name(vehicle))
+1: [] ~B(vehicle, name(vehicle))
 
-FAR1: ( D (vehicle, location)
+FAR_1: ( D (vehicle, location) ) -> <> B (vehicle, at(0,0))
+FAR_6: [] ( ( ~B(vehicle, ride_info) ) -> ( <> D(vehicle, get_ride) )  )
+
+FAR_7: ( B (vehicle, obstacle(center, 1, 2) ) & <> ( B(vehicle, pick_up(1, 2)) ||  B(vehicle, drop_off(1, 2))  )) ->  ( <> D(vehicle, refuse_ride(_)) & [] ~G(vehicle, drive_to(1,2)) )
+
+FAR_8_1_8_2: ( B(vehicle,pick_up(1,1)) -> <> G(vehicle,complete_journey(1,1)) ) -> <> ( B(vehicle, at(1,1)) & D (vehicle, park(pick_up)))
+FAR_8_1_8_3: ( ( B(vehicle,pick_up(1,2)) -> <> G(vehicle,complete_journey(1,2)) ) & <> P(obstacle(center, 1, 2)) ) ) -> <> D (vehicle, refuse_ride(pick_up))
+
+
+FAR_9_1_9_2: ( B(vehicle,drop_off(1,2)) -> (B(vehicle,passenger) & <> G(vehicle,complete_journey(1,2)) ) ) -> <> ( B(vehicle, at(1,2)) & D (vehicle, park(drop_off)))
+
+
+ADD_OBSTACLE_1: B (vehicle, at(1,1))  -> ( B (vehicle, obstacle(north, 1, 1)) & B (vehicle, obstacle(center, 1, 2)) )
+ADD_OBSTACLE_2: ( B ( vehicle, at(1,0) ) &  <> ( D(vehicle, drive(_,_,north,_,_) ) ) ) -> <> ( B ( vehicle, at(1,1) ) & P (obstacle(north, 1, 1)) & P (obstacle(center, 1, 2)) )
+
+

@@ -1,26 +1,30 @@
+Pré-C: só fala o que é
+Ação: fala remove ou adiciona
+
+Plano: Lista de tarefas
+Um objetivos possui diferentes planos para diferentes pré-condições.
+
+Reforçar que [achieve] objetivos funcionam como loops.
+
 GWENDOLEN
 
 // Nome do agente
 :name: car
 
 :Initial Beliefs:
-name(car)
-
 // O agente não possui nenhum conhecimento inicial
 
 :Reasoning Rules:
 
-/*
-Será definido a seguir algumas crenças do agentes que são utilizadas ao decorrer de sua implementação.
-at(X,Y) : Indica que o agente está localizado nas coordenadas (X,Y) do ambiente.
 
-*/
+O objetivo drive_to(X,Y) é satisfeito quando o agente se movimentar até o destino do seu trajeto atual.
+Logo, sua posição, at(X,Y), é igual ao seu destino, destination(X,Y).
+drive_to(X,Y) :- destination(X,Y), at(X,Y);
 
-arrived(X,Y) :- destination(X,Y), at(X,Y);
-drive_to(X,Y) :- arrived(X,Y);
-finish_all_rides :- done_all_rides;
+
 
 // ------------------ Directions ------------------
+
 
 north_south :- north;
 north_south :- south;
@@ -29,12 +33,7 @@ east_west :- west;
 
 // ------------------ Ride information ------------------
 
-current_pick_up(X,Y) :- ride_info, pick_up(X,Y);
-current_drop_off(X,Y) :- ride_info, drop_off(X,Y);
 
-journey_not_possible(X,Y) :-verify_journey(X,Y), ~possible_journey_to(X,Y);
-
-reach(X,Y) :- try_to_reach(X,Y), at(X,Y);
 
 // ------------------ Drive ------------------
 
@@ -49,32 +48,21 @@ turn(west) :- heading(west), west, destination(X,Y), at(X,AT_Y);
 obstacle_ahead(DIRECTION) :- at(AT_X, AT_Y), obstacle(DIRECTION, AT_X, AT_Y);
 
 can_adapt(CA_D, D_X, D_Y) :- at(AT_X, AT_Y), ~obstacle(CA_D, AT_X, AT_Y), ~known_route(CA_D, D_X, D_Y);
-can_adapt_simple(CA_D, D_X, D_Y) :- can_adapt(CA_D, D_X, D_Y), go(CA_D);
 can_adapt_route(CA_D, D_X, D_Y) :- can_adapt(CA_D, D_X, D_Y), go_adapt(CA_D);
 
+go_adapt(north) :- ~adapt(south), go_adapt(north_south);
+go_adapt(south) :- ~adapt(north), go_adapt(north_south);
+go_adapt(east) :- ~adapt(west), go_adapt(east_west);
+go_adapt(west) :- ~adapt(east), go_adapt(east_west);
 
-go_adapt(north_south)	:- ~adapt(east), ~adapt(west);
-go_adapt(east_west) 	:- ~adapt(north), ~adapt(south);
+go_adapt(north_south)	:- ~heading(north), ~heading(south), ~adapt(east), ~adapt(west);
+go_adapt(east_west) 	:- ~heading(east), ~heading(west), ~adapt(north), ~adapt(south);
 
-go_adapt(north) :- ~adapt(south), go(north_south);
-go_adapt(south) :- ~adapt(north), go(north_south);
-go_adapt(east) :- ~adapt(west), go(east_west);
-go_adapt(west) :- ~adapt(east), go(east_west);
-
-go(north_south)	:- ~heading(north), ~heading(south), ~adapt(east), ~adapt(west);
-go(east_west) 	:- ~heading(east), ~heading(west), ~adapt(north), ~adapt(south);
-
-go(north) :- ~adapt(south), go(north_south);
-go(south) :- ~adapt(north), go(north_south);
-go(east) :- ~adapt(west), go(east_west);
-go(west) :- ~adapt(east), go(east_west);
 
 known_route(north,KR_X,KR_Y) :- at(AT_X,AT_Y), from(F_X,F_Y), adapt_from_to(F_X,F_Y, AT_X,AT_Y, north, KR_X,KR_Y), moved_from_to(F_X,F_Y,AT_X, AT_Y, south, KR_X, KR_Y);
 known_route(south,KR_X,KR_Y) :- at(AT_X,AT_Y), from(F_X,F_Y), adapt_from_to(F_X,F_Y, AT_X,AT_Y, south, KR_X,KR_Y), moved_from_to(F_X,F_Y,AT_X, AT_Y, north, KR_X, KR_Y);
 known_route(east,KR_X,KR_Y) :-	at(AT_X,AT_Y), from(F_X,F_Y), adapt_from_to(F_X,F_Y, AT_X,AT_Y, east, KR_X,KR_Y), moved_from_to(F_X,F_Y,AT_X, AT_Y, west, KR_X, KR_Y);
 known_route(west,KR_X,KR_Y) :-	at(AT_X,AT_Y), from(F_X,F_Y), adapt_from_to(F_X,F_Y, AT_X,AT_Y, west, KR_X,KR_Y), moved_from_to(F_X,F_Y,AT_X, AT_Y, east, KR_X, KR_Y);
-
-moved(DIR, X, Y) :- at(AT_X,AT_Y), moved_from_to(F_X,F_Y,AT_X, AT_Y, DIR, X, Y);
 
 
 // ------------------ Controle de danos em caso de colisões ------------------
@@ -88,155 +76,281 @@ finish_all_rides [achieve]
 :Plans:
 
 
+Para relembrar a definição de um plano, abordado na seção (SEÇÃO QUE FALA SOBRE PLANOS), iremos utilizar como exemplo o seguinte plano:
++!finish_all_rides [achieve] : {~B at(X,Y)} <- localize, *at(GPS_X, GPS_Y);
+Neste exemplo:
++!finish_all_rides [achieve]:  é a trigger do plano, isto é o evento que invocou este plano (neste caso, a adição do objetivo de conquista !finish_all_rides).
+~B at(X,Y): é a pré-condição (guard) para que este plano seja executado. No exemplo, o agente não possui uma crença que satisfaça at(X,Y), onde X e Y são unificadores.
+localize, *at(LX, LY): é o corpo do plano e representa as tarefas que serão realizadas uma vez que depois que o evento ocorreu, este plano teve suas pré-condições satisfeitas. Aqui, será realizado a ação localize e as atividades do agente serão suspensas, *, até o mesmo possuir uma crença que satisfaça at(LX, LY), onde LX e LY são unificadores.
+
+Neste trabalho, visando facilitar o entendimento do código do agente, uma nomenclaruta é definida para identificar cada um dos planos. A idenficação são as primeiras letras do nome do evento (trigger) do plano. Sendo este o prefixo das identificações. Por exemplo, o nome de um plano que possui +!finish_all_rides [achieve] como evento será FAR.
+
+No caso de planos ativados por uma mesma trigger, é utilizado o prefixo e tais planos são diferenciados por uma numeração (1..*).  A ordem da numeração é influenciada pela ordem que os planos são definidos no código.  Logo, os planos:
++!finish_all_rides [achieve] : {~B at(X,Y)} <- localize, *at(GPS_X, GPS_Y); e
++!finish_all_rides [achieve] : {B damaged(high)} <- refuse_ride(car_unavailable), +done_all_rides;
+serão identificados como FAR 1 e FAR 2, respectivamente.
+
+Quando planos são semelhantes em sua função ( onde sua diferença consiste por ligeiras modificações em suas pré-condições e/ou corpo de tarefas) é adicionado uma nova numeração (1..*) após o prefixo e numeração que os identificam.
+Por exemplo, os planos:
++!finish_all_rides [achieve] : {B pick_up(X,Y),  B obstacle(center, X,Y)} <- refuse_ride(pick_up), -ride_info; e,
++!finish_all_rides [achieve] : {B drop_off(X,Y), B obstacle(center, X,Y), ~B passenger} <- refuse_ride(drop_off), -ride_info;
+são identificados como FAR 7.1  e FAR 7.2, respectivamente.
+
+É importante ressaltar que na linguagem Gwendolen, é necessário organizar de forma clara os planos com um mesmo prefixo, pois o primeiro plano que tiver suas pré-condições satisfeitas terá o conjunto de tarefas definidas em seu corpo executado.
+
+
+Explicação das notações dos diagramas do agente
+
+
+A seguir, o funcionamento do agente será abordado em detalhes. Serão apresentados fragmentos do código e suas respectivas funções no contexto geral da execução do agente. A versão completo do código e os detalhes de cada plano pode ser encontrada no apêndice Agente (número)
+
+Fazer resumo do funcionamento do agente por completo?
+
+
 // ---------------------------------------------- Finish all Rides - !finish_all_rides [achieve] ----------------------------------------------
-/*
-O objetivo finish_all_rides é o principal do agente.
-O agente busca por corridas (rides) até acreditar que não há mais nenhuma possível, no_possible_new_ride, e assim, encerrando sua execução.
-Como definido na seção Reasoning Rules do código do agente, finish_all_rides é satisfeita pela adição da crença done_all_rides.
 
-FAR 1
-	Pré-condições: O agente não sabe sua localização no ambiente, ~at(X,Y).
-	Planos: O agente executa uma ação para encontrar sua posição dentro do ambiente, localize,
-	e suspende sua execução até que o ambiente informe as coordenadas da sua localização, *at(GPS_X, GPS_Y).
 
-FAR 2
-	Pré-condições: Houve uma colisão gravíssima (life_threatening).
-	Planos: O agente informa o ambiente para totalmente sua execução.
+O objetivo inicial finish_all_rides é o principal do agente.
+Têm como função principal receber informações sobre novos passageiros, acionar os objetivos necessários para que os trajetos aos pontos de pegada e destino sejam realizados e decidir quando a execução do agente é finalizada.
 
-FAR 3.1
-	Pré-condições: Na última jornada houve uma colisão grave (high) e o veículo possui um passageiro, passenger.
-	Planos: O agente remove a crença de que há um passageiro, passenger, no veículo e recusa o termino da corrida atual, refuse_ride(drop_off).
+Este busca por novos passageiros
+
+// O agente tentou alcançar alguma coordenada (X,Y), crença try_to_reach(X,Y), e encontra-se localizado em tal coordenada, crença at(X,Y).
+reach(X,Y) :- try_to_reach(X,Y), at(X,Y);
+O encerramento da execução do agente pode ocorrer em cinco ocasiões:
+1. FAR 2:
+2. FAR 3:
+3. FAR 3:
+4. FAR 3:
+5. FAR 3:
+
+até receber uma percepção do ambiente
+o informando de que não há mais nenhuma possível, crença no_possible_new_ride.
+
+ e assim, encerra sua execução.
+
+Vale lembrar que é definido na seção Reasoning Rules que finish_all_rides é satisfeito pela crença done_all_rides.
+
+Reasoning Rules:
+finish_all_rides :- done_all_rides;
+
+footnote sobre reasoning rules
+
+FAR 1 - Este sempre será o primeiro plano executado pelo agente, pois o mesmo não possui nenhum conhecimento inicial.
+		Pré-condições: O agente não sabe sua localização no ambiente, crença ~at(X,Y).
+		Planos: O agente executa uma ação para encontrar sua posição dentro do ambiente, executa a ação localize,
+	e suspende sua execução até que o ambiente informe as coordenadas da sua localização, espera a crença *at(GPS_X, GPS_Y).
+
+FAR 5 - Todas as corridas foram atendidas, quando possível, e não houve nenhuma colisão durante o trajeto do agente.
+	Pré-condições: Não há mais nenhuma corrida possível, no_possible_new_ride,
+	e não houve nenhuma colisão nos percussos realizados pelo agente, damaged(DAMAGE_LEVEL).
+	Plano: É adiciona a crença que o agente realizou todas as corridas, done_all_rides.
+
+Os planos FAR 2, FAR 3.1, FAR 3.2 e FAR 4 são utilizadas quando o agente crê que houve ao menos uma colisão, de qualquer nível de dano,
+durante sua execução.
+FAR 2  - Colisão grave.
+		Pré-condições: Houve uma colisão grave (high) na última jornada, crença damaged(high).
+		Planos: O agente informa o ambiente que nenhuma outra corrida será concluída, executa a ação refuse_ride(car_unavailable),
+		 e para totalmente sua execução, adiciona a crença done_all_rides.
+FAR 3.1 - Colisão média.
+		Pré-condições: Na última jornada houve uma colisão média (moderate) e o veículo possui um passageiro, passenger.
+		Planos: O agente remove a crença de que há um passageiro, passenger, no veículo e recusa o termino da corrida atual, refuse_ride(drop_off).
 	Na sequência, move-se até o depósito, depot(X,Y), para que seja consertado, +!complete_journey (X, Y) [perform],
 	e termina sua execução.
-FAR 3.2
-	Pré-condições: Na última jornada houve uma colisão grave (high) e o veículo não possui um passageiro, passenger.
-	Planos: O agente recusa a corrida atual, refuse_ride(pick_up).Na sequência, move-se até o depósito, depot(X,Y), para que seja consertado, +!complete_journey (X, Y) [perform],
+FAR 3.2 - Colisão média.
+	Pré-condições: Na última jornada houve uma colisão média (moderate) e o veículo não possui um passageiro, passenger.
+	Planos: O agente recusa a corrida atual, refuse_ride(pick_up). Na sequência, move-se até o depósito, depot(X,Y), para que seja consertado, +!complete_journey (X, Y) [perform],
 	e termina sua execução.
-
-FAR 4
-	Pré-condições: Na última jornada houve uma colisão média (moderate) e o veículo controlado pelo agente não possui nenhum passageiro.
-	Neste cenário, mesmo após uma colisão média, o agente tenta terminar a corrida atual, caso haja um passageiro a bordo,
-	antes de voltar para o depósito.
-	Planos: O agente move-se até o depósito, depot(X,Y), para que seja consertado, +!complete_journey (X, Y) [perform],
-	e remove suas crenças referentes ao nível de dano causada ao veículo. E recusa a corrida atual caso o passageiro ainda não tenha sido pego.
-
-FAR 5
+FAR 4 - Colisão leve.
 		Pré-condições: Não há mais nenhuma corrida possível, no_possible_new_ride,
 e houve ao menos uma colisão leve nos percussos realizados pelo agente, damaged(low).
 		Plano: O agente move-se até o depósito, depot(X,Y), para que seja consertado, +!complete_journey (X, Y) [perform].
-		A seguir, é adiciona a crença que o agente realizou todas as corridas, done_all_rides.
+		A seguir, é adiciona a crença que o agente realizou todas as corridas, done_all_rides
 
-FAR 6 - Pré-condições: Não há mais nenhuma corrida possível, no_possible_new_ride,
-e não houve nenhuma colisão nos percussos realizados pelo agente, damaged(DAMAGE_LEVEL).
-		Plano: É adiciona a crença que o agente realizou todas as corridas, done_all_rides.
-*/
+FAR 6
+		Pré-condições: O agente não possui nenhuma informação sobre uma corrida, ~ride_info, mas acredita que há corridas disponíveis, ~no_possible_new_ride.
+		Plano: É executada uma ação para receber informações sobre uma corrida, get_ride.
+		O agente suspende o objetivo até que tenha recebido tal informação, *ride_info.
 
-// Get location of the car in the environment
+FAR 7
+As versões do objetivo finish_all_rides FAR 7.1 e FAR 7.2 são semelhantes em sua função.
+Ambas são ativadas quando o agente já tem conhecimento sobre a existência de um obstáculo nas coordenadas
+do ponto de pegada ou destino da corrida atual.
 
-// FAR 1
+
+FAR 7.1 - Obstáculo no ponto de pegada.
+		Pré-condições: Antes do agente começar a sua corrida atual,
+		existe uma crença de que nas coordendas do ponto de pegada da corrida atual, pick_up(X,Y),
+		existe um obstáculo, obstacle(center, X,Y).
+		Plano: A corrida atual é recusada pois as coordenadas do ponto de pegada é inatíngivel,
+		refuse_ride(pick_up) e a crença ride_info é removida para que o agente recebe uma nova corrida.
+FAR 7.2 - Obstáculo no ponto de destino.
+		Pré-condições: Antes do agente começar a sua corrida atual,
+		existe uma crença de que nas coordendas do ponto de destino da corrida atual, drop_off(X,Y),
+		existe um obstáculo, obstacle(center, X,Y).
+		Além disso, o veículo guiado pelo agente não possui nenhum passageiro a bordo (utilizado para evitar conflitos entre os planos FAR 7.2 e FAR 9.3).
+		Plano:  A corrida atual é recusada pois as coordenadas do ponto de destino é inatíngivel,
+		refuse_ride(drop_off) e a crença ride_info é removida para que o agente recebe uma nova corrida.
+
+FAR 8
+	Os planos a seguir são utilizados pelo agente para tentar atingir o ponto de pegada da corrida atual.
+	Desta formas, tais planos possuem como pré-condição que o agente possui o conhecimento sobre algum ponto de pegada, crença pick_up(X,Y), e
+	nenhum passageiro está embarcado no veículo, crença ~passenger.
+
+FAR 8.1 - Ainda não tentou se movimentar para o ponto de pegada.
+		Pré-condições: O agente ainda não tentou se movimentar para o ponto de pegada (X,Y), crença ~try_to_reach(X,Y).
+		Plano: Adiciona um objetivo para atingir um ponto de pegada (X,Y), adiciona o objetivo !complete_journey (X,Y) [perform],
+		e consequentemente, passa a acreditar que tentou ir até tais coordenadas, adiciona a crença try_to_reach(X,Y).
+FAR 8.2 - O deslocamento para o ponto de pegada foi possível.
+		Pré-condições: O agente consegue atingir um ponto de pegada (X,Y), regra de raciocínio reach(X,Y).
+		Plano: Estaciona o veículo, ação park(pick_up), espera o embarque do passageiro da corrida, adiciona a crença passenger, e
+		remove a crença try_to_reach(X,Y), para que não haja conflitos com outros planos.
+FAR 8.3 - O deslocamento para o ponto de pegada não foi possível.
+		Pré-condições: Mesmo após tentar completar o trajeto até um ponto de pegada (X,Y),
+		não foi possível atingir tais coordenadas, regra de raciocínio ~reach(X,Y).
+		Plano: A corrida atual é recusada pois não foi possível se movimentar para o ponto de pegada, ação refuse_ride(pick_up).
+		Na sequência, é removido a crença try_to_reach(X,Y), para que não haja conflitos com outros planos e
+		a corrida atual é descartada, remove a crença ride_info.
+
+FAR 9
+	Os planos definidos a seguir são utilizados para tentar atingir o ponto de destino da corrida atual.
+	Sendo assim, estes planos possuem como pré-condição o conhecimento sobre algum ponto de destino, crença drop_off(X,Y), e
+	a existência de um passageiro embarcado no veículo, crença passenger.
+	Vale ressaltar que os planos, FAR 9.1, FAR 9.2 e FAR 9.3 são similares com FAR 8.1, FAR 8.2 e FAR 8.3, respectivamente.
+	A diferença se encontra no uso da crença drop_off(X,Y), ao invés de pick_up(X,Y),
+	e ter como pré-condição a crença de que há um passageiro embarcado.
+
+FAR 9.1 - Ainda não tentou se movimentar para o ponto de destino.
+		Pré-condições: O agente ainda não tentou se movimentar para o ponto de destino (X,Y), crença ~try_to_reach(X,Y).
+		Plano: Adiciona um objetivo para atingir um ponto de destino (X,Y), adiciona o objetivo !complete_journey (X,Y) [perform],
+		e consequentemente, passa a acreditar que tentou ir até tais coordenadas, adiciona a crença try_to_reach(X,Y).
+FAR 9.2 - O deslocamento para o ponto de destino foi possível.
+		Pré-condições: O agente consegue atingir um ponto de destino (X,Y), regra de raciocínio reach(X,Y).
+		Plano: Estaciona o veículo, ação park(drop_off), espera o desembarque do passageiro da corrida, remove a crença passenger, e
+		remove a crença try_to_reach(X,Y), para que não haja conflitos com outros planos e descarta a corrida atual,
+		remove a crença ride_info, pois a corrida foi concluída.
+FAR 9.3 - O deslocamento para o ponto de destino não foi possível.
+		Pré-condições: Mesmo após tentar completar o trajeto até um ponto de destino (X,Y),
+		não foi possível atingir tais coordenadas, regra de raciocínio ~reach(X,Y).
+		Plano: A corrida atual é recusada pois não foi possível se movimentar para o ponto de destino, ação refuse_ride(drop_off).
+		Na sequência, é removido a crença try_to_reach(X,Y), para que não haja conflitos com outros planos e
+		a corrida atual é descartada, remove a crença ride_info.
+
+FAR 1
 +!finish_all_rides [achieve] : {~B at(X,Y)} <- localize, *at(GPS_X, GPS_Y);
 
-// FAR 2
-+!finish_all_rides [achieve] : {B damaged(life_threatening)}
-								<- refuse_ride(car_unavailable), +done_all_rides;
-// FAR 3.1
-+!finish_all_rides [achieve] : {B damaged(moderate), B depot(X,Y), B passenger}
-								<- refuse_ride(drop_off), -passenger, +!complete_journey (X, Y) [perform], park(depot), +done_all_rides;
-// FAR 3.2
-+!finish_all_rides [achieve] : {B damaged(moderate), B depot(X,Y), ~B passenger}
-								<- refuse_ride(pick_up), +!complete_journey (X, Y) [perform], park(depot), +done_all_rides;
 
-// FAR 4
-+!finish_all_rides [achieve] : {B no_possible_new_ride, B damaged(low), B depot(X,Y)}
-								<- message("Going back to Depot to be repaired."), +!complete_journey (X, Y) [perform], park(depot), +done_all_rides;
+FAR 2
++!finish_all_rides [achieve] : {B damaged(high)} <- refuse_ride(car_unavailable), +done_all_rides;
+FAR 3.1
++!finish_all_rides [achieve] : {B damaged(moderate), B depot(X,Y), B passenger} <- refuse_ride(drop_off), -passenger, +!complete_journey (X, Y) [perform], park(depot), +done_all_rides;
+FAR 3.2
++!finish_all_rides [achieve] : {B damaged(moderate), B depot(X,Y), ~B passenger} <- refuse_ride(pick_up), +!complete_journey (X, Y) [perform], park(depot), +done_all_rides;
+FAR 4
++!finish_all_rides [achieve] : {B no_possible_new_ride, B damaged(low), B depot(X,Y)} <- message("Going back to Depot to be repaired."), +!complete_journey (X, Y) [perform], park(depot), +done_all_rides;
 
-// FAR 5
-+!finish_all_rides [achieve] : {B no_possible_new_ride} <- +done_all_rides;
+FAR 5
++!finish_all_rides [achieve] : {B no_possible_new_ride, ~B damaged(DAMAGE_LEVEL)} <- +done_all_rides;
 
+FAR 6
++!finish_all_rides [achieve] : {~B ride_info, ~B no_possible_new_ride} <- get_ride, *ride_info;
 
-
-// Get New Ride
-+!finish_all_rides [achieve] : {~B ride_info} <- get_ride, *ride_info;
-
-// Verify it can reach destinations of the new ride before it tries to pick up the passanger
-+!finish_all_rides [achieve] : {B pick_up(X,Y),  B obstacle(center, X,Y), ~B passenger}
-								<- refuse_ride(pick_up), -pick_up(X,Y), -ride_info;
-+!finish_all_rides [achieve] : {B drop_off(X,Y), B obstacle(center, X,Y), ~B passenger}
-								<- refuse_ride(drop_off), -drop_off(X,Y), -ride_info;
-
-// ---------------------------------------------- Pick Up ----------------------------------------------
-
-// Current ride - Pick up
-+!finish_all_rides [achieve] : {B current_pick_up(X,Y), ~B try_to_reach(X,Y), ~B passenger}
-								<- 	+!complete_journey (X,Y) [perform],
-									+try_to_reach(X,Y);
-
-+!finish_all_rides [achieve] : {B current_pick_up(X,Y), B reach(X,Y), ~B passenger}
-								<- 	park(pick_up), +passenger,
-									-pick_up(X,Y), -try_to_reach(X,Y);
-
-+!finish_all_rides [achieve] : {B current_pick_up(X,Y), ~B reach(X,Y), ~B passenger}
-								<- 	refuse_ride(pick_up), -pick_up(X,Y),
-									-try_to_reach(X,Y), -ride_info;
+FAR 7.1
++!finish_all_rides [achieve] : {B pick_up(X,Y),  B obstacle(center, X,Y)} <- refuse_ride(pick_up), -ride_info;
+FAR 7.2
++!finish_all_rides [achieve] : {B drop_off(X,Y), B obstacle(center, X,Y), ~B passenger} <- refuse_ride(drop_off), -ride_info;
 
 
-// ---------------------------------------------- Drop Off ----------------------------------------------
+FAR 8.1
++!finish_all_rides [achieve] : {B pick_up(X,Y), ~B try_to_reach(X,Y), ~B passenger} <- +!complete_journey (X,Y) [perform], +try_to_reach(X,Y);
+FAR 8.2
++!finish_all_rides [achieve] : {B pick_up(X,Y), B reach(X,Y), ~B passenger} <- park(pick_up), +passenger, -try_to_reach(X,Y);
+FAR 8.3
++!finish_all_rides [achieve] : {B pick_up(X,Y), ~B reach(X,Y), ~B passenger} <- 	refuse_ride(pick_up), -try_to_reach(X,Y), -ride_info;
 
-// Current ride - Drop off
-+!finish_all_rides [achieve] : {B current_drop_off(X,Y), ~B try_to_reach(X,Y), B passenger}
-								<- 	+!complete_journey (X,Y) [perform],
-									+try_to_reach(X,Y);
 
+FAR 9.1
++!finish_all_rides [achieve] : {B drop_off(X,Y), ~B try_to_reach(X,Y), B passenger} <- +!complete_journey (X,Y) [perform], +try_to_reach(X,Y);
+FAR 9.2
++!finish_all_rides [achieve] : {B drop_off(X,Y), B reach(X,Y), B passenger} <- park(drop_off), -passenger, -try_to_reach(X,Y), -ride_info;
+FAR 9.3
++!finish_all_rides [achieve] : {B drop_off(X,Y), ~B reach(X,Y), B passenger} <- 	refuse_ride(drop_off), -passenger, park(drop_off), -try_to_reach(X,Y), -ride_info;
 
-+!finish_all_rides [achieve] : {B current_drop_off(X,Y), B reach(X,Y), B passenger}
-								<- 	park(drop_off), -passenger,
-									-drop_off(X,Y), -try_to_reach(X,Y), -ride_info;
-
-+!finish_all_rides [achieve] : {B current_drop_off(X,Y), ~B reach(X,Y), B passenger}
-								<- 	refuse_ride(drop_off), -passenger, park(drop_off),
-									-drop_off(X,Y), -try_to_reach(X,Y), -ride_info;
-
-// ----------------------------------------------
-
-+!clear_current_ride [perform] : {B pick_up(PK_X,PK_Y), B drop_off(DP_X,DP_Y)}
-								<- -pick_up(PK_X,PK_Y), -try_to_reach(PK_X,PK_Y), -drop_off(DP_X,DP_Y), -try_to_reach(P_X,DP_Y), -ride_info;
 
 // ---------------------------------------------- Complete Journey ----------------------------------------------
 
-// Go from current position to at(X,Y)
-+!complete_journey (X,Y) [perform] : {B at(J_X,J_Y)} <- +!clear_travel_data [perform],
+CJ
+O objetivo !complete_journey (X,Y) têm como função executar as tarefas necessárias para que o agente realize o trajeto
+de sua posição atual até as coordenadas (X,Y).
+
+
+	Pré-condições: O agente têm conhecimento sobre sua posição atual, crença at(F_X,F_Y).
+	Plano: Todos as informações sobre quaisquers trajetos realizados anteriormente são apagados, adiciona objetivo clear_travel_data [perform];
+as coordenadas da posição atual do agente são reconhecidos como o ponto de partida do trajeto atual, adiciona a crença from(F_X,F_Y);
+as coordenadas (X,Y) deste objetivo são utilizadas para especificar o destino do trajeto, adiciona a crença destination(X,Y);
+o agente começa a se mover, adiciona a crença moving, e tenta realizar os deslocamentos necessários até as coordenadas (X,Y),
+adiciona o objetivo o !drive_to(X,Y) [achieve]; e por fim, o agente para de se mover, remove crença moving, e remove os pontos de partida,
+remove from(F_X,F_Y), e de destino atuais, remove destination(X,Y).
+
+CJ
++!complete_journey (X,Y) [perform] : {B at(F_X,F_Y)} <- +!clear_travel_data [perform],
 													+from(F_X,F_Y), +destination(X,Y),
 													+moving, +!drive_to(X,Y) [achieve], -moving,
 													-from(F_X,F_Y), -destination(X,Y);
 
-+!clear_travel_data [perform] : {True} <- 	+!clear_direction_data [perform],
-											-heading(north), -heading(south), -heading(east), -heading(west);
 
+Os objetivos com prefixo !clear, CLEAR 1, CLEAR 2 e CLEAR 3 têm como função remover crenças do agente para
+evitar conflitos entre trajetos ou durante um mesmo trajeto,
+sendo utilizados para o controle interno da execução do agente.
+Devido a sua natureza trivial, não há necessidade de explora-los profundamente.
+
+CLEAR 1
++!clear_travel_data [perform] : {True} <- 	+!clear_direction_data [perform], -heading(north), -heading(south), -heading(east), -heading(west);
+CLEAR 2
++!clear_direction_data [perform] : {True} <- +!clear_adapt [perform], -north, -south, -east, -west, -receive_direction;
+CLEAR 3
 +!clear_adapt [perform] : {True} <- -adapt(north), -adapt(south), -adapt(east), -adapt(west);
-
-
-
 // --------------------------------------------- Get Route
+
+
+GR
+Quando acionado, o objetivo !get_route identifica a(s) direções do destino do trajeto atual com base na localização atual.
+As opções são: north (norte), south (sul), east (leste) e west (oeste).
+
+ 		Pré-condições: O agente como destino as coordenadas (X,Y) para o seu trajeto atual, crença destination(X,Y).
+ 		Plano: Todos as informações sobre quaiquers direções são apagados para que não haja conflitos, adiciona o objetivo !clear_travel_data [perform];
+		o agente realiza uma ação para identificar em quais direções este deve se movimentar para atingir as coordenadas
+		do trajeto atual, realiza ação compass(X, Y), e suspende sua atividade até o ambiente informar tais direções,
+		espera por crença receive_direction.
 
 +!get_route [perform] : {B destination(X,Y)} <- +!clear_travel_data [perform], compass(X, Y), *receive_direction;
 
-+!clear_direction_data [perform] : {True}
-									<- +!clear_adapt [perform],
-										-north, -south, -east, -west,
-										-receive_direction;
 
 // ---------------------------------------------- Drive - !drive_to(X,Y) ----------------------------------------------
 
-/*
+
+O objetivo drive_to(X,Y) realiza a movimentação necessária para que o agente atinja as coordenadas (X,Y), que é o destino do trajeto atual.
+
+Movimentação:
+
+É possível se mover uma posição por vez, em ambos os eixos X e Y, nas direções norte, sul, leste e oeste
+(identificadas internamente por, respectivamente: north, south, east e west).
+
+
+DT 1
+Pré-condições: Não há nenhum conhecimento sobre as direções que o agente deve se movimentar, crenças ~north, ~south, ~east e ~west.
+Plano: É acionado um objetivo para obter as direções para o destino atual, adiciona o objetivo get_route[perform].
 
 DT XX -
 	Pré-condição: O agente está tentando adaptar sua rota adapt, mas não há como desviar dos obstáculos ao redor da sua localização atual, unavoidable_collision(AT_X, AT_Y).
 	Planos: O agente para de tentar desviar o obstáculos,
 	aciona o plano para escolher qual obstáculo que este deve colidir, +!choose_obstacle_collision [perform], e abandona o plano atual para adaptar sua rota.
 
-*/
 
-// Choose first direction to go
+	Pré-condições:
+	Plano:
+
+DT 1
 +!drive_to(X,Y) [achieve] : {~B north, ~B south, ~B east, ~B west} <- +!get_route [perform];
 
 // Decide where the car should head to
@@ -280,7 +394,7 @@ DT XX -
 // ---------------------------------------- Drive Direction ----------------------------------------
 
 +!drive_direction(D) [perform] : { G drive_to(X, Y) [achieve] , B from(F_X,F_Y)}
-						<- -moving, drive(F_X,F_Y, D, X, Y);
+						<- -moving, drive(F_X, F_Y, D, X, Y);
 
 // ---------------------------------------- Choose Obstacle Collision  ----------------------------------------
 /*
@@ -379,10 +493,6 @@ AR 1 -
 								+!drive_direction(D) [perform],
 								+!get_route [perform],
 								-!adapt_route(D,X,Y) [achieve];
-
-//+!adapt_route(D,X,Y) [achieve] : {~B can_adapt(north,X,Y), ~B can_adapt(south,X,Y), ~B can_adapt(east,X,Y), ~B can_adapt(west,X,Y)}
-//							<- 	-!drive_to(X,Y) [achieve],
-//								-!adapt_route(D,X,Y) [achieve];
 
 
 // ---------------------------------------- HOLD THE SCROLL IS HERE  ----------------------------------------
@@ -540,12 +650,16 @@ Este lógica é motivada que quando há uma colisão, obstáculos temporários s
 // ---------------------------------------- Control Emergencies - !control_emergency (X,Y)  ----------------------------------------
 
 /*
-Planos para controlar emêrgencias.
+
+Planos para controlar emêrgencias acionados em caso de colisões, isto é,
+quando o agente está localizado em uma coordenada que possui um obstáculo.
+
 CE1
-	Pré-condições: Quando o agente acredita que está em uma coordenada AT_X,AT_Y, at(AT_X,AT_Y), que possui um obstáculo localizado em si,
-	obstacle(center, AT_X,AT_Y).
-	Plano: O agente para de se mover, adiciona uma nova crença referente a sua colisão na posição atual, crashed(AT_X,AT_Y),
-e ativa o plano de controle de emergências, !control_emergency (AT_X,AT_Y) [achieve].
+	Pré-condições: Quando o agente acredita que está em uma coordenada (AT_X,AT_Y), crença at(AT_X,AT_Y), que possui um obstáculo localizado em si,
+	crença obstacle(center, AT_X,AT_Y).
+	Plano: O agente suspende quaisquer planos que o façam se mover, remove a crença moving e adapt;
+	identifica a colisão na posição atual, adiciona a crença crashed(AT_X,AT_Y),
+e ativa o plano de controle de emergências, adiciona o objetivo !control_emergency (AT_X,AT_Y) [achieve].
 
 CE2
 	Pré-condições: Caso o agente acredite que colidiu, crashed(AT_X,AT_Y), mas não está em estado de alerta, alert_state.
@@ -554,13 +668,15 @@ entra em modo de espera até a emergência chegar, emergency(AT_X,AT_Y). E por f
 
 CE3 -
 	Pré-condições: O agente acredita que está sendo atendido pela emergência, emergency(AT_X,AT_Y), e está em estado de alerta,  alert_state,
-e o nível de dano causado pela colisão é leve, damaged(low).
+e o nível de dano atual causado por colisões é leve, crença damaged(low).
+Sendo assim, um dano de níveis médio, crença damaged(moderate), e grave, crença damaged(high) nunca ocorreram.
 	Plano: É executada a ação get_assistence(AT_X,AT_Y) para consertar o veículo no local e tratar de possíveis ferimentos dos passageiros.
 	O agente espera a assistência ser concluída, *assisted(AT_X,AT_Y), antes de prosseguir seu trajeto.
 
 CE4
 	Pré-condições: O agente acredita que está sendo atendido pela emergência, emergency(AT_X,AT_Y), e está em estado de alerta,  alert_state,
-e o nível de dano causado pela colisão é grave, (moderate).
+e o nível de dano  atual causado por colisões é médio, (moderate).
+Sendo assim, um dano de nível grave, crença damaged(high) nunca ocorreu.
 	Plano: É executada a ação get_assistence(AT_X,AT_Y) para consertar o veículo no local e
 	o agente espera o conserto necessário ser realizado, *assisted(AT_X,AT_Y).
 	Nessa cenário, o agente abandona quais planos envolvendo seu trajeto atual, !drive_to(X,Y) [achieve] e !adapt_route(D,X,Y) [achieve].
@@ -581,11 +697,11 @@ e o nível de dano causado pela colisão é grave, (high).
 	<- call_emergency(AT_X,AT_Y), *emergency(AT_X,AT_Y), +alert_state;
 
 // CE 3
-+!control_emergency (AT_X,AT_Y) [achieve] : {B emergency(AT_X,AT_Y), B alert_state, B damaged(low)}
++!control_emergency (AT_X,AT_Y) [achieve] : {B emergency(AT_X,AT_Y), B alert_state, B damaged(low), ~B damaged(moderate), ~B damaged(high)}
 	<-  get_assistence(AT_X,AT_Y), *assisted(AT_X,AT_Y), -alert_state, -crashed(AT_X,AT_Y), +moving, +adapt;
 
 // CE 4
-+!control_emergency (AT_X,AT_Y) [achieve] : {B emergency(AT_X,AT_Y), B alert_state, B damaged(moderate)}
++!control_emergency (AT_X,AT_Y) [achieve] : {B emergency(AT_X,AT_Y), B alert_state, B damaged(moderate),  ~B damaged(high)}
 	<-  get_assistence(AT_X,AT_Y), *assisted(AT_X,AT_Y), message(assisted), -alert_state, -crashed(AT_X,AT_Y), -!adapt_route(D,X,Y) [achieve], -!drive_to(X,Y) [achieve];
 
 // CE 5

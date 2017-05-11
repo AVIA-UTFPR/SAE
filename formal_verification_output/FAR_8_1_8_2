@@ -1,0 +1,30 @@
+JavaPathfinder core system v8.0 (rev ${version}) - (C) 2005-2014 United States Government. All rights reserved.
+
+
+====================================================== system under test
+ail.util.AJPF_w_AIL.main("/Users/lfernandes/Dropbox/tcc/dev/autonomous_car/main/_005_dont_crash/autonomous_car.ail","/Users/lfernandes/Dropbox/tcc/dev/autonomous_car/main/_005_dont_crash/autonomous_car.psl","FAR_8_1_8_2")
+
+====================================================== search started: 5/11/17 6:54 PM
+Passenger FAR_8_1_8_2: PickUp(1,1) - Drop Off (1,2)
+Initializing GPS
+Agent vehicle is at (1,0)
+
+vehicle going to pick up  FAR_8_1_8_2 in (1,1)
+vehicle going to drop off FAR_8_1_8_2 in (1,2)
+Moving north from (1,0) to (1,1)
+Pick Up Passanger FAR_8_1_8_2 in (1,1)
+
+====================================================== results
+no errors detected
+
+====================================================== statistics
+elapsed time:       00:00:40
+states:             new=196,visited=1,backtracked=197,end=0
+search:             maxDepth=196,constraints=0
+choice generators:  thread=1 (signal=0,lock=1,sharedRef=0,threadApi=0,reschedule=0), data=196
+heap:               new=830118,released=818730,maxLive=12126,gcCycles=197
+instructions:       391869012
+max memory:         1303MB
+loaded code:        classes=344,methods=5218
+
+====================================================== search finished: 5/11/17 6:54 PM

@@ -1,0 +1,44 @@
+JavaPathfinder core system v8.0 (rev ${version}) - (C) 2005-2014 United States Government. All rights reserved.
+
+
+====================================================== system under test
+ail.util.AJPF_w_AIL.main("/Users/lfernandes/Dropbox/tcc/dev/autonomous_car/main/_005_dont_crash/autonomous_car.ail","/Users/lfernandes/Dropbox/tcc/dev/autonomous_car/main/_005_dont_crash/autonomous_car.psl","FAR_7")
+
+====================================================== search started: 5/11/17 5:43 PM
+Passenger FAR_7: PickUp(1,1) - Drop Off (2,1)
+Passenger FAR_7: PickUp(1,2) - Drop Off (2,1)
+Passenger FAR_7: PickUp(1,1) - Drop Off (1,2)
+Initializing GPS
+Agent vehicle is at (1,0)
+
+vehicle going to pick up  FAR_7 in (1,1)
+vehicle going to drop off FAR_7 in (2,1)
+Moving north from (1,0) to (1,1)
+Pick Up Passanger FAR_7 in (1,1)
+Moving east from (1,1) to (2,1)
+Drop Off Passanger FAR_7 in (2,1)
+
+
+vehicle going to pick up  FAR_7 in (1,2)
+vehicle going to drop off FAR_7 in (2,1)
+Pick up: vehicle can't finish ride for FAR_7
+
+vehicle going to pick up  FAR_7 in (1,1)
+vehicle going to drop off FAR_7 in (1,2)
+Drop off: vehicle can't finish ride for FAR_7
+No more availble rides!
+
+====================================================== results
+no errors detected
+
+====================================================== statistics
+elapsed time:       00:01:14
+states:             new=458,visited=0,backtracked=458,end=1
+search:             maxDepth=458,constraints=0
+choice generators:  thread=1 (signal=0,lock=1,sharedRef=0,threadApi=0,reschedule=0), data=457
+heap:               new=1827384,released=1815933,maxLive=12354,gcCycles=458
+instructions:       806581868
+max memory:         1815MB
+loaded code:        classes=345,methods=5233
+
+====================================================== search finished: 5/11/17 5:44 PM

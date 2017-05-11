@@ -1,0 +1,41 @@
+A verificação formal de alguns planos do agente não é realizado em virtude da sua trivialidade.
+Busca-se confirmar o funcionamento correto de planos e objetivos essencias para a execução do agente.
+
+FAR_1 (Plano FAR 1) - Se o agente executar uma ação para detectar sua localização, ação location,
+então em algum momento no futuro ele irá ter uma crença referente a suas coordenadas atuais, crença at(0,0).
+
+FAR_6 (Plano FAR 6) - Sempre que o agente não acreditar que possui informações sobre uma corrida, crença ~ride_info,
+em algum momento no futuro ele irá executar uma ação para adquirir um novo passageiro, ação get_ride.
+
+FAR_7 (Planos FAR 7.1 e FAR 7.2) - Se houver um obstáculo em uma coordenadada (1,2), crença obstacle(center, 1, 2),
+e eventualmente este for uma ponto de pegada, crença pick_up(1, 2), ou um ponto de destino, crença drop_off(1,2), de uma corrida, então
+ o agente irá recusar tal corrida, refuse_ride, e nunca tentará se mover para tais coordenadas, objetivo drive_to(1,2).
+
+FAR_8_1_8_2 (Planos FAR 8.1 e FAR 8.2) - Caso o agente crer em um ponto de pegada nas coordenadas (1,1), crença pick_up(1,1),
+então o mesmo irá tentar se movimentar até lá, objetivo complete_journey(1,1). Isso implicará que em algum momento o agente estará localizado
+nas coordenadas (1,1), crença at(1,1) e estacionará o veículo para o embarque do passageiro, ação park(pick_up).
+
+FAR_8_1_8_3 (Planos FAR 8.1 e FAR 8.3) - Caso a corrida atual tenha como ponto de pegada as coordenadas (1,2), crença pick_up(1,2),
+o agente irá tentar se movimentar até lá, objetivo complete_journey(1,2). Porém se em algum momento houver uma percepção que tal coordenada
+possui um obstáculo, percepção obstacle(center, 1, 2),  então a corrida atual será recusada, ação refuse_ride(pick_up).
+
+
+FAR_9_1_9_2 (Planos FAR 9.1 e FAR 9.2) - Caso o agente crer em um ponto de destino nas coordenadas (1,2), crença drop_off(1,2),
+então o mesmo acredita que há um passageiro embarcado, crença passenger, irá tentar se movimentar até o destino, objetivo complete_journey(1,2).
+Isso implicará que em algum momento o agente estará localizado
+nas coordenadas (1,2), crença at(1,2) e estacionará o veículo para o desembarque do passageiro, ação park(drop_off).
+
+// Percepções de obstáculos
+ADD_OBSTACLE_1 - Se o agente está nas coordendas (1,1), então isto significa que o mesmo possui as
+crenças referentes ao obstáculos nas coordenadas ao norte, (1,2).
+ADD_OBSTACLE_2 - Se o agente está nas coordendas (1,0) e em algum momento executar uma ação para se movimentar ao norte,
+então em algum momento no futuro o agente estará na posição (1,1) e
+irá receber as percepções do ambiente referente ao obstáculo localiza nas coordenadas (1,2).
+
+
+// Movimentação do agente
+
+
+// Exclusão dos objetivos atuais caso haja um obstáculo no ponto de pegada ou de destino
+
+// Regras da colisão - Durante e após

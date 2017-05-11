@@ -5,14 +5,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import ail.mas.DefaultEnvironment;
+//import ail.mas.DefaultEnvironment;
 import ail.mas.DefaultEnvironmentwRandomness;
 import ail.mas.MAS;
 import ail.syntax.Action;
 import ail.syntax.NumberTermImpl;
 import ail.syntax.Predicate;
 import ail.syntax.Unifier;
-import ail.syntax.VarTerm;
 import ail.util.AILexception;
 import ajpf.util.choice.Choice;
 import main.Client;
@@ -21,21 +20,22 @@ import util.GridCell;
 import util.Passenger;
 import util.Util;
 
-public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentwRandomness
+public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultEnvironmentwRandomness
 	
 	// Variável utilizada para o ambiente decidir qual é a chance de um acidente acontecer 
 	private Choice<Boolean> accidentChance;
 	
 	// Variável utilizada para o ambiente decidir definir o nível de dano causado em uma colisão.
 	private Choice<String> damageLevel;
+	
 
 	// Informações sobre o agente Carro
-	private Coordinate car = new Coordinate(0, 0); // Posição Inicial do agente
+	private Coordinate car = new Coordinate(1, 1); // Posição Inicial do agente
 	private Coordinate depotLocation = new Coordinate(0, 0); // Localização do Depósito
 	private String currentDirection = "north"; // Direção default do carro
 
 	// Informações sobre a Grid do ambiente
-	private int nObstacles = 0; // Número total de obstáculos estáticos 
+	private int nObstacles = 10; // Número total de obstáculos estáticos 
 	private int minGridSize = 0; // Utilizado somente para a programação. Indica que o grid inicia nas posições (0,0)
 	private int maxGridSize = 10; // Tamanho máximo da grid.
 
@@ -46,13 +46,13 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 
 	// Informações sobre os passageiros
 	private ArrayList<Passenger> passengers = new ArrayList<Passenger>(); // Lista de passageiros
-	private int maxInitPassengers = 0; // Número de passageiros gerados randômicamente
-	private Passenger currentPassenger; 
+	private int maxInitPassengers = 5; // Número de passageiros gerados randômicamente
+	private Passenger currentPassenger = new Passenger(0, 0, 0, 0); 
 
 	
 	// Informações sobre o simulador gráfico do ambiente.
 	Client client = new Client(); // Classe responsável pela conexão com o simulador
-	private boolean simulate = false; // Informa esta classe se deve mandar informações para o simulador
+	private boolean simulate = true; // Informa esta classe se deve mandar informações para o simulador
 	private int waitTime = 700; 
 	// Tempo de espera padrão para que o ambiente atualize novamente. 
 	//Têm o propósito de parar o processamente do ambiente e do agente para que possa ser possível acompanhar a execução pelo simulador.
@@ -91,7 +91,52 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 		initObstacles();
 		
 		/*
-		 * 
+		 * FAR_1
+		this.car.setX(0);
+		this.car.setX(0);
+		 */
+
+		/*
+		 * FAR_6
+		this.car.setX(1);
+		this.car.setY(0);
+		passengers.add(new Passenger("FAR_6", 1, 1, 1, 2));
+		passengers.add(new Passenger("FAR_6", 1, 3, 1, 4));
+		 */
+
+		/*
+		 * FAR_7
+		this.car.setX(1);
+		this.car.setY(0);
+		passengers.add(new Passenger("FAR_7", 1, 1, 2, 1));
+		passengers.add(new Passenger("FAR_7", 1, 2, 2, 1));
+		passengers.add(new Passenger("FAR_7", 1, 1, 1, 2));
+		environmentGrid.get(GridCell.getIndex(1,2)).setHasObstacle(true);
+		 */
+		
+		/*
+		 * FAR_8_1_8_2
+		 * FAR_9_1_9_2
+		this.car.setX(1);
+		this.car.setY(0);
+		passengers.add(new Passenger("FAR_8_1_8_2", 1, 1, 1, 2));
+		 */
+		
+		/*
+		 * FAR_8_1_8_3
+		this.car.setX(1);
+		this.car.setY(0);
+		passengers.add(new Passenger("FAR_8_1_8_3", 1, 2, 1, 3));
+		environmentGrid.get(GridCell.getIndex(1,2)).setHasObstacle(true);
+		 */
+		
+		/*
+		 * ADD_OBSTACLE_1
+		 * ADD_OBSTACLE_2
+		this.car.setX(1);
+		this.car.setY(0);
+		passengers.add(new Passenger("ADD_OBSTACLE", 1, 1, 2, 1));
+		environmentGrid.get(GridCell.getIndex(1,2)).setHasObstacle(true);
 		 */
 		
 		
@@ -120,8 +165,8 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 
 	private void showAllPassengerList() {
 		for (Passenger passenger : passengers) {
-			/*System.err.println(String.format("Passenger %s: PickUp(%d,%d) - Drop Off (%d,%d)", passenger.getName(),
-					passenger.getPickUpX(), passenger.getPickUpY(), passenger.getDropOffX(), passenger.getDropOffY()));*/
+			System.err.println(String.format("Passenger %s: PickUp(%d,%d) - Drop Off (%d,%d)", passenger.getName(),
+					passenger.getPickUpX(), passenger.getPickUpY(), passenger.getDropOffX(), passenger.getDropOffY()));
 		}
 	}
 
@@ -144,28 +189,27 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 
 	// Inicializa a lista de passageiros do ambiente
 	private void initPassengerList() {
-		for (int i = 0; i < maxInitPassengers; i++) {
 
-			/*
-			int pickUpX = random_ints.nextInt(maxGridSize) + 1;
-			int pickUpY = random_ints.nextInt(maxGridSize) + 1;
-
-			int dropOffX = random_ints.nextInt(maxGridSize) + 1;
-			int dropOffY = random_ints.nextInt(maxGridSize) + 1;
-
-*/
-			passengers.add(new Passenger("" + i, 1, 1, 2, 2));
-		}
+			for (int i = 0; i < maxInitPassengers; i++) {
+				int pickUpX = (int) (Math.random() * (maxGridSize+1));
+				int pickUpY = (int) (Math.random() * (maxGridSize+1));
+				int dropOffX = (int) (Math.random() * (maxGridSize+1));
+				int dropOffY = (int) (Math.random() * (maxGridSize+1));
+				passengers.add(new Passenger("" + i, pickUpX, pickUpY, dropOffX, dropOffY));
+				
+			}
 	}
 
 	// Inicializa a localização de obstáculos randômicos no ambiente. 
 	private void initObstacles() {
+		
 		int x, y;
 		for(int i = 0; i < this.nObstacles; i++) {
-			//x = random_ints.nextInt(maxGridSize) + 1;
-			//y = random_ints.nextInt(maxGridSize) + 1;
-			environmentGrid.get(GridCell.getIndex(5, 5)).setHasObstacle(true);
+			x = (int) (Math.random() * (maxGridSize+1));
+			y = (int) (Math.random() * (maxGridSize+1));
+			environmentGrid.get(GridCell.getIndex(x, y)).setHasObstacle(true);
 		}
+		
 	}
 
 	
@@ -198,7 +242,7 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 		case "compass": 
 			x = Util.getIntTerm(act.getTerm(0));
 			y = Util.getIntTerm(act.getTerm(1));
-			compass(agName, x, y);
+			compass(agName, new Coordinate(x,y));
 			break;
 		case "localize": 
 			localize(agName);
@@ -231,10 +275,10 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 			y = Util.getIntTerm(act.getTerm(1));
 			callEmergency(agName, new Coordinate(x, y));
 			break;
-		case "get_assistence": 
+		case "get_assistance": 
 			x = Util.getIntTerm(act.getTerm(0));
 			y = Util.getIntTerm(act.getTerm(1));
-			getAssistence(agName, new Coordinate(x, y));
+			getAssistance(agName, new Coordinate(x, y));
 			break;
 		case "a_m": 
 			// Exibe mensagens
@@ -369,7 +413,7 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 		if(west != 'N') 
 			obstacleAround++;
 		
-		if(obstacleAround >= 3) {
+		if(obstacleAround >= 3 && simulate) {
 			
 			if(accidentChance.get_choice()) {
 
@@ -488,7 +532,7 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 	 * 
 	 * A função verifica se há um obstáculo em qualquer direção (norte, sul, leste e oeste) em relação a currentPosition.
 	 * Caso sim, é adicionado novas perpeções no agente referentes aos obstáculos 
-	 * e em qual direção (north, south, east, west) está localizado em relação a posição atual.
+	 * e em qual direção (north, south, east, west) está localizado em relação a posição atual do agente.
 	 * Nas coordenadas do próprio obstáculo, é adicionado uma percepção informando que naquela coordenada existe um obstáculo (center).
 	 * 
 	 * As fronteiras do ambiente, ou seja, coordenadas que não são mapeadas pelo ambiente, são consideradas como obstáculos. 
@@ -612,22 +656,32 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 		addPercept(agName, noFurther);
 
 	}
+	
+	/*
+	 * O método compass recebe os seguintes argumentos:
+	 * String agName: Nome do agente.
+	 * Coordinate coordinate: Coordenadas do destino do trajeto atual, para as quais deseja se verificar as direções.
+	 * 
+	 * Todas as crenças referentes a um direção são removidas do agente, 
+	 * e verifica-se quais direções o agente deve-se mover para atingir o destino atual.
+	 * Após a verificação, novas percepções sobre as direções são adicionadas ao agente.
+	 */
 
-	private void compass(String agName, int x, int y) {
-		System.err.println( String.format("Verifying direction for (%d,%d)", x,y) );
+	private void compass(String agName, Coordinate coordinate) {
+		//System.err.println( String.format("Verifying direction for (%d,%d)", x,y) );
 
 		removeDirection(agName, "north");
 		removeDirection(agName, "south");
 		removeDirection(agName, "east");
 		removeDirection(agName, "west");
 
-		if (y > car.getY())
+		if (coordinate.getY() > car.getY())
 			addDirection(agName, "north");
-		if (y < car.getY())
+		if (coordinate.getY() < car.getY())
 			addDirection(agName, "south");
-		if (x > car.getX())
+		if (coordinate.getX() > car.getX())
 			addDirection(agName, "east");
-		if (x < car.getX())
+		if (coordinate.getX() < car.getX())
 			addDirection(agName, "west");
 
 		Predicate receiveDirection = new Predicate("receive_direction");
@@ -763,25 +817,40 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 	}
 
 
+	/*
+	 * O método getRide recebe o seguintes argumento:
+	 * String agName: O nome do agente.
+	 * 
+	 * A função remove as percepções referentes ao ponto de pegada, pick_up, e o ponto de destino, drop_off,do último passageiro.
+	 * Na sequência, é verificado se ainda há algum passageiro disponível, onde tal informação é armazenada na array interna do ambiente, passengers.
+	 * 
+	 * Caso não haja nenhum outro passageiro, o ambiente adiciona uma percepção para o agente 
+	 * informando que não há mais nenhuma corrida disponível, no_possible_new_ride.
+	 * Caso exista alguma corrida disponível, o ambiente insere percepções referentes a tal corrida no agente agName, 
+	 * e atualiza a variável de controle da lista de passageiros.
+	 * 
+	 * Em ambos os casos, o ambiente informa ao agente por meio da percepção ride_info que os dados sobre uma possível corrida foram atualizados. 
+	 * 
+	 */
 	private void getRide(String agName) {
+		
+		Predicate pickUpLast = new Predicate("pick_up");
+		pickUpLast.addTerm(new NumberTermImpl(currentPassenger.getPickUpX()));
+		pickUpLast.addTerm(new NumberTermImpl(currentPassenger.getPickUpY()));
 
-		Predicate pickUpAll = new Predicate("pick_up");
-		pickUpAll.addTerm(new VarTerm("X"));
-		pickUpAll.addTerm(new VarTerm("Y"));
+		Predicate dropOffLast = new Predicate("drop_off");
+		dropOffLast.addTerm(new NumberTermImpl(currentPassenger.getDropOffX()));
+		dropOffLast.addTerm(new NumberTermImpl(currentPassenger.getDropOffY()));
 
-		Predicate dropOffAll = new Predicate("drop_off");
-		dropOffAll.addTerm(new VarTerm("X"));
-		dropOffAll.addTerm(new VarTerm("Y"));
-
-		removeUnifiesPercept(agName, pickUpAll);
-		removeUnifiesPercept(agName, dropOffAll);
+		removePercept(agName, pickUpLast);
+		removePercept(agName, dropOffLast);
 
 		if (passengers.isEmpty()) {
 
 			Predicate noPossibleRide = new Predicate("no_possible_new_ride");
 			addPercept(agName, noPossibleRide);
 
-			System.err.println("No more availble rides!");
+			System.err.println("No more available rides!");
 		} else {
 			currentPassenger = passengers.get(0);
 			passengers.remove(0);
@@ -849,7 +918,7 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 	
 
 	/*
-	 * A função recebe os seguintes argumentos:
+	 * A função getAssistance recebe os seguintes argumentos:
 	 * String agName: Nome do agente
 	 * Coordinate currentPosition: Coordenadas onde o agente colidiu.
 	 * 
@@ -861,7 +930,7 @@ public class AutonomousCarEnv extends DefaultEnvironment { //DefaultEnvironmentw
 	 * O ambiente também informa o simulador para remover os dados sobre os níveis de dano de cada obstáculo.
 	 * 
 	 */
-	private void getAssistence(String agName, Coordinate currentPosition) {
+	private void getAssistance(String agName, Coordinate currentPosition) {
 		
 		for(Predicate obstacleDamage : this.obstacleDamageRelated) {
 			removePercept(agName, obstacleDamage);
