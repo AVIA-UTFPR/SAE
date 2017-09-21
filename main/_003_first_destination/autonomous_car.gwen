@@ -1,0 +1,58 @@
+GWENDOLEN
+
+:name: car
+
+:Initial Beliefs:
+
+at(0,0)
+destination(5,5)
+
+
+:Reasoning Rules:
+
+arrived(X,Y) :- destination(X,Y), at(X,Y);
+go_to_destination :- arrived(X,Y);
+
+position_grid(AT_X, AT_Y,D_X, D_Y) :- at(AT_X, AT_Y), destination(D_X, D_Y);
+
+:Initial Goals:
+
+go_to_destination [achieve]
+
+:Plans:
++!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B going_north,
+									B position_grid(AT_X, Y, D_X, Y), AT_X < D_X} 
+								<- print("turn north to east"), -going_north, +going_east;
+								
++!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B going_north,
+								  B position_grid(AT_X, Y,D_X, Y), D_X < AT_X} 
+								<- print("turn north to west"), -going_north, +going_west;
+
++!go_to_destination [achieve] : {~B arrived(A_X,A_Y),  B going_south,
+								  B position_grid(AT_X, Y, D_X, Y), AT_X < D_X} 
+								<- print("turn south to east"), -going_south, +going_east;
+								
++!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B going_south,
+								  B position_grid(AT_X, Y, D_X, Y), D_X < AT_X} 
+								<- print("turn south to west"), -going_south, +going_west;
+								
+								
+								
++!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B going_north} <- drive(north), *at(X,Y);
++!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B going_south} <- drive(south), *at(X,Y);
++!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B going_east}  <- drive(east), *at(X,Y);	
++!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B going_west}  <- drive(west), *at(X,Y);
+
+// First decision
++!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B position_grid(AT_X, AT_Y,D_X, D_Y), AT_Y < D_Y} 
+								<- +going_north;
++!go_to_destination [achieve] : {~B arrived(A_X,A_Y), B position_grid(AT_X, AT_Y,D_X, D_Y), D_Y < AT_Y} 
+								<- +going_south;
+
+
++at(X,Y) : {B arrived(X,Y)} <- honk, park;
+
++at(X,Y) : {True} <- print("new position");
+-at(X,Y) : {True};
+
++noisy : {True} <- honk;

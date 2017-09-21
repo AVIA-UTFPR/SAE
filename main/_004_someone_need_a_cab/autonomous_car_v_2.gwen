@@ -1,0 +1,71 @@
+GWENDOLEN
+
+:name: car
+
+:Initial Beliefs:
+
+depot(0,0)
+
+:Reasoning Rules:
+
+arrived(X,Y) :- destination(X,Y), at(X,Y);
+finish_ride :- arrived(X,Y);
+drive_to(X,Y) :- arrived(X,Y);
+
+position_grid(AT_X, AT_Y,D_X, D_Y) :- at(AT_X, AT_Y), destination(D_X, D_Y);
+
+:Initial Goals:
+
+finish_ride [achieve]
+
+:Plans:
+
++!finish_ride [achieve] : {True} 
+							<- 	init_gps, get_drop_off_location, *destination(X,Y), 
+								+!drive_to(X,Y) [achieve];
+
+
+//+!drive [achieve] : {~B destination(X,Y)} <- get_drop_off_location, *destination(X1,Y1);
+
++!drive_to(X,Y) [achieve] : {~B arrived(A_X, A_Y), B going_north, 
+						B position_grid(AT_X, S_Y, D_X, S_Y), AT_X < D_X} 
+								<- -going_north, +going_east; // north to east
+								
++!drive_to(X,Y) [achieve] : {~B arrived(A_X, A_Y), B going_north,
+						B position_grid(AT_X, S_Y, D_X, S_Y), D_X < AT_X} 
+								<- -going_north, +going_west; // north to west 
+
++!drive_to(X,Y) [achieve] : {~B arrived(A_X, A_Y),  B going_south, 
+						B position_grid(AT_X, S_Y, D_X, S_Y), AT_X < D_X} 
+								<- -going_south, +going_east; // south to east
+								
++!drive_to(X,Y) [achieve] : {~B arrived(A_X, A_Y), B going_south, 
+						B position_grid(AT_X, S_Y, D_X, S_Y), D_X < AT_X} 
+								<- -going_south, +going_west; // south to west 
+								
+								
+								
++!drive_to(X,Y) [achieve] : {~B arrived(A_X, A_Y), B going_north} <- drive(north), *at(AT_X, AT_Y);
++!drive_to(X,Y) [achieve] : {~B arrived(A_X, A_Y), B going_south} <- drive(south), *at(AT_X, AT_Y);
++!drive_to(X,Y) [achieve] : {~B arrived(A_X, A_Y), B going_east}  <- drive(east),  *at(AT_X, AT_Y);	
++!drive_to(X,Y) [achieve] : {~B arrived(A_X, A_Y), B going_west}  <- drive(west),  *at(AT_X, AT_Y);
+
+// Choose first direction to go
++!drive_to(X,Y) [achieve] : {~B arrived(A_X,A_Y), B position_grid(AT_X, AT_Y, D_X, D_Y), AT_Y < D_Y} 
+								<- +going_north;
++!drive_to(X,Y) [achieve] : {~B arrived(A_X,A_Y), B position_grid(AT_X, AT_Y, D_X, D_Y), D_Y < AT_Y} 
+								<- +going_south;
++!drive_to(X,Y) [achieve] : {~B arrived(A_X,A_Y), B position_grid(AT_X, S_Y, D_X, S_Y), AT_X < D_X} 
+								<- +going_east;
++!drive_to(X,Y) [achieve] : {~B arrived(A_X,A_Y), B position_grid(AT_X, S_Y, D_X, S_Y), D_X < AT_X} 
+								<- +going_west;
+
+
++at(X,Y) : {B arrived(X,Y)} <- honk, park;
+
++at(X,Y) : {True};
+-at(X,Y) : {True};
+
++destination(X,Y) : {True}; 
+
++noisy : {True} <- honk;

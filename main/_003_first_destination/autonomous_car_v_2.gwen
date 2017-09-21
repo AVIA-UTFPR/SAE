@@ -1,0 +1,26 @@
+GWENDOLEN
+
+:name: car
+
+:Initial Beliefs:
+
+at(0,0)
+destination(1,1)
+
+:Reasoning Rules:
+
+arrived(X,Y) :- destination(X,Y), at(X,Y);
+go_to_destination :- arrived(X,Y);
+
+:Initial Goals:
+
+go_to_destination [achieve]
+
+:Plans:
+
++!go_to_destination [achieve] : {~B arrived(D_X,D_Y)} <- drive(north), *at(P_X,P_Y), drive(east);
+//+!go_to_03 [achieve] : {B at(0,3)} <- print("Car is at position 0_3");
+
++at(X,Y) : {B arrived(X,Y)} <- honk;
+
++noisy : {True} <- print(honkagain);

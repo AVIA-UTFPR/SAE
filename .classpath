@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry excluding="_004_someone_need_a_cab/" kind="src" path="main"/>
+	<classpathentry kind="src" path="main/_004_someone_need_a_cab"/>
+	<classpathentry kind="src" path="simulator"/>
+	<classpathentry kind="src" path="src/classes"/>
+	<classpathentry kind="src" path="src/main"/>
+	<classpathentry kind="src" path="src/peers"/>
+	<classpathentry kind="lib" path="lib/3rdparty/ev3classes.jar"/>
+	<classpathentry kind="lib" path="lib/3rdparty/ev3tools.jar"/>
+	<classpathentry kind="lib" path="lib/3rdparty/jpf-annotations.jar"/>
+	<classpathentry kind="lib" path="lib/3rdparty/jpf-classes.jar"/>
+	<classpathentry kind="lib" path="lib/3rdparty/jpf.jar"/>
+	<classpathentry kind="lib" path="lib/3rdparty/junit-4.10.jar"/>
+	<classpathentry kind="lib" path="lib/3rdparty/RunJPF.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
