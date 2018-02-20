@@ -20,229 +20,228 @@ import util.GridCell;
 import util.Passenger;
 import util.Util;
 
-public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultEnvironmentwRandomness
+public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 	
-	// Variável utilizada para o ambiente decidir qual é a chance de um acidente acontecer 
-	private Choice<Boolean> accidentChance;
+	// Agent/Vehicle
+	private Coordinate car; // Current coordinates of the agent/vehicle
+	private Coordinate depotLocation; // Depot coordinates (Position where the agent goes after crashing)
+	private String currentDirection; // Direction that the vehicle is heading towards (Used by the simulator)
 	
-	// Variável utilizada para o ambiente decidir definir o nível de dano causado em uma colisão.
-	private Choice<String> damageLevel;
+	// Environment 
+	private Map<String, GridCell> environmentGrid; // Maps all available positions of the environment
+	private int nObstacles; // Total of static obstacles
+	private int maxGridSize; // Environment's grid/matrix size (maxGridSize X maxGridSize). Starts at 0
+
+
+	// Passengers
+	private ArrayList<Passenger> passengers; // Passenger List
+	private int nPassengers; // Total of Passengers (Randomly Generated)
+	private Passenger currentPassenger; // Current Passenger inside the Agent/Vehicle
 	
-
-	// Informações sobre o agente Carro
-	private Coordinate car = new Coordinate(1, 1); // Posição Inicial do agente
-	private Coordinate depotLocation = new Coordinate(0, 0); // Localização do Depósito
-	private String currentDirection = "north"; // Direção default do carro
-
-	// Informações sobre a Grid do ambiente
-	private int nObstacles = 10; // Número total de obstáculos estáticos 
-	private int minGridSize = 0; // Utilizado somente para a programação. Indica que o grid inicia nas posições (0,0)
-	private int maxGridSize = 10; // Tamanho máximo da grid.
-
-	private Map<String, GridCell> environmentGrid; // Mapeamento de todas as posições do ambiente
-	 
-	// Armazena informações sobre os predicadores relacionados com um obstáculo que não pode ser desviado.
-	private ArrayList<Predicate> obstacleDamageRelated= new ArrayList<>();
-
-	// Informações sobre os passageiros
-	private ArrayList<Passenger> passengers = new ArrayList<Passenger>(); // Lista de passageiros
-	private int maxInitPassengers = 5; // Número de passageiros gerados randômicamente
-	private Passenger currentPassenger = new Passenger(0, 0, 0, 0); 
-
 	
-	// Informações sobre o simulador gráfico do ambiente.
-	Client client = new Client(); // Classe responsável pela conexão com o simulador
-	private boolean simulate = true; // Informa esta classe se deve mandar informações para o simulador
-	private int waitTime = 700; 
-	// Tempo de espera padrão para que o ambiente atualize novamente. 
-	//Têm o propósito de parar o processamente do ambiente e do agente para que possa ser possível acompanhar a execução pelo simulador.
+	// Helpers
+	private ArrayList<Predicate> obstacleDamageRelated = new ArrayList<>(); // Store info about predicates related to unavoidable collisions.
+	private Choice<Boolean> collisionChance; // Determines the chance of unavoidable collisions given the existence of a precondition
+	private Choice<String> damageLevel; // Determines the chance of obstacle damage level classification 
+	
+	// Simulator
+	//Class client - Class responsible to create a conexion environment-simulator. Uses static methods
+	private boolean simulate; // Determines if the environment should send message to the simulator
+	private int waitTimeDefault; // Wait time between messages
+	private int waitTimeLocation; // Wait time to send first message
 
-
-	// Configurações Iniciais do Ambiente
+	/*
+	 * Note:
+	 * In order to be able to visualize agent's movements correctly, wait times (waitTimeDefault and waitTimeLocation) are used.
+	 * Any part of the code 'if(simulate)' verifies if the simulator is active to send messages to the simulation.
+	 */
+	
+	// Environment setup
 	@Override
 	public void setMAS(MAS m) {
 		super.setMAS(m);
+		
+		// Info about agent/vehicle - Default Values
+		this.car = new Coordinate(0, 0);
+		this.depotLocation = new Coordinate(0, 0); 
+		this.currentDirection = "north"; // (Used by simulation)
+		
+		// Info about environment 
+		this.nObstacles = 0;
+		this.maxGridSize = 10;
+		 
+		// Passengers
+		this.passengers = new ArrayList<Passenger>();
+		this.nPassengers = 2;
+		this.currentPassenger = new Passenger(new Coordinate(1, 1), new Coordinate(2, 1));  // (Used by simulation)
+		 
+		 // Helpers
+		this.obstacleDamageRelated = new ArrayList<>();
+		
+		/*
+		 * Initialize collisionChance, variable responsible to determine if in a given situation the obstacle avoidance can occur.
+		 * As precondition, the agent must be surrounded by three static obstacles.
+		 * In this scenario, there is a 10% chance that the agent won't be able to avoid a possible collision.
+		 */
+		
+		this.collisionChance = new Choice<Boolean>(m.getController());
+		this.collisionChance.addChoice(0.9, false); // Will avoid
+		this.collisionChance.addChoice(0.1, true);  // Won't avoid
+		
+		/*
+		 *  Initialize damageLevel, variable responsible to determine the damage caused by each obstacle in unavoidable collision situation.
+		 *  Levels:
+		 *  1 - Low.
+		 *  2 - Moderate.
+		 *  3 - High.
+		 *  
+		 *  The distinction between such levels is made by the agent, which will process each situation differently.
+		 *  There are equal chances for classification to each level.
+		 */
+		
+		this.damageLevel = new Choice<String>(m.getController());
+		this.damageLevel.addChoice(0.33, "high");
+		this.damageLevel.addChoice(0.33, "moderate");
+		this.damageLevel.addChoice(0.34, "low");
+		 
+		// Simulator
+		this.simulate = true;
+		this.waitTimeDefault = 750; 
+		this.waitTimeLocation = 300; 
 
 		
-		// Inicializa a variável accidentChance com a probabilidade de um acidente ocorrer
-		// Nota: Há pré-condições para que a possiblidade de um acidente seja considerada
-		/*
-		 * A probabilidade de um acidente acontecer no cenário determinado é de 10%.
-		 */
-		accidentChance = new Choice<Boolean>(m.getController());
-		accidentChance.addChoice(0.0, false); // Probabilidade negativa
-		accidentChance.addChoice(0.1, true);  // Probalidade de um acidente ocorrer.
-		
-		// Inicializa a variável damageLevel com as probalidades do dano causado por um acidente.
-		/*
-		 * Nível de dano:
-		 * 1 - Colisão Grave (high) - Chances de ocorrência 10%: Grande estrago no veículo e ferimentos graves dos passageiros do veículo.
-		 * 2 - Colisão Média (moderate) - Chances de ocorrência 25%: Estrago no veículo,e possivelmente causa ferimentos leves nos passageiros do veículo.
-		 * 3 - Colisão Leve (low) - Chances de ocorrência 65%: Causa apenas arranhões no veículo, nenhum passageiro se fere.
-		 */
-		damageLevel = new Choice<String>(m.getController());
-		damageLevel.addChoice(0.125, "high");
-		damageLevel.addChoice(0.25, "moderate");
-		damageLevel.addChoice(0.0625, "low");
-		
-		// Define as informações inicias sobre o  ambiente. Mapemento das posições, lista de passageiros e lista de obstáculos.
-		this.environmentGrid = initGridInformation();
-		initPassengerList();
-		initObstacles();
-		
-		/*
-		 * FAR_1
-		this.car.setX(0);
-		this.car.setX(0);
-		 */
-
-		/*
-		 * FAR_6
-		this.car.setX(1);
-		this.car.setY(0);
-		passengers.add(new Passenger("FAR_6", 1, 1, 1, 2));
-		passengers.add(new Passenger("FAR_6", 1, 3, 1, 4));
-		 */
-
-		/*
-		 * FAR_7
-		this.car.setX(1);
-		this.car.setY(0);
-		passengers.add(new Passenger("FAR_7", 1, 1, 2, 1));
-		passengers.add(new Passenger("FAR_7", 1, 2, 2, 1));
-		passengers.add(new Passenger("FAR_7", 1, 1, 1, 2));
-		environmentGrid.get(GridCell.getIndex(1,2)).setHasObstacle(true);
-		 */
-		
-		/*
-		 * FAR_8_1_8_2
-		 * FAR_9_1_9_2
-		this.car.setX(1);
-		this.car.setY(0);
-		passengers.add(new Passenger("FAR_8_1_8_2", 1, 1, 1, 2));
-		 */
-		
-		/*
-		 * FAR_8_1_8_3
-		this.car.setX(1);
-		this.car.setY(0);
-		passengers.add(new Passenger("FAR_8_1_8_3", 1, 2, 1, 3));
-		environmentGrid.get(GridCell.getIndex(1,2)).setHasObstacle(true);
-		 */
-		
-		/*
-		 * ADD_OBSTACLE_1
-		 * ADD_OBSTACLE_2
-		this.car.setX(1);
-		this.car.setY(0);
-		passengers.add(new Passenger("ADD_OBSTACLE", 1, 1, 2, 1));
-		environmentGrid.get(GridCell.getIndex(1,2)).setHasObstacle(true);
-		 */
+		// Setup Methods
+		initGridInformation(); // Environment Grid
+		initPassengerList(); // Random Passenger List
+		initObstacles(); // Obstacles (Coordinates)
 		
 		
-		/*
-		 * Cenário XX - Ocorrência de um acidente - Todos obstáculos são mapeados pelo ambiente
-		 * */
-		
-		// Envia informações para o simulador
+		// Simulator Setup
 		if(simulate) {
-			client.sendMessage( client.convertArray2String( new String[] {"clear", String.valueOf(maxGridSize)} ) );
-			try {
-				TimeUnit.MILLISECONDS.sleep(100);
-			} catch(Exception e) {
-				System.err.println(e);
-			}
+		    Client.sendMessage( new String[] {"clear", String.valueOf(this.maxGridSize)} );
+		    
+		    Client.sendMessage( 
+			new String[] {"pickUp", String.valueOf(this.currentPassenger.getPickUp().getX()), 
+					String.valueOf(this.currentPassenger.getPickUp().getY())} );
+		    Client.sendMessage( 
+			new String[] {"dropOff", String.valueOf(this.currentPassenger.getDropOff().getX()), 
+					String.valueOf(this.currentPassenger.getDropOff().getY())});
+		    
+		    try {
+		    		TimeUnit.MILLISECONDS.sleep(100);
+		    } catch(Exception e) {
+		    		System.err.println(e);
+		    }
 		}
 
-
-		// Garante que a posição inicial do agente e o depósito não possuam um obstáculo.
-		environmentGrid.get(GridCell.getIndex(car.getX(), car.getY())).setHasObstacle(false);
-		environmentGrid.get(GridCell.getIndex(depotLocation.getX(), depotLocation.getY())).setHasObstacle(false);
-
+		// Shows current passenger list
 		showAllPassengerList();
-
 	}
 
+	/*
+	 * Shows current passenger list
+	 */
 	private void showAllPassengerList() {
 		for (Passenger passenger : passengers) {
 			System.err.println(String.format("Passenger %s: PickUp(%d,%d) - Drop Off (%d,%d)", passenger.getName(),
-					passenger.getPickUpX(), passenger.getPickUpY(), passenger.getDropOffX(), passenger.getDropOffY()));
+					passenger.getPickUp().getX(), passenger.getPickUp().getY(), 
+					passenger.getDropOff().getX(), passenger.getDropOff().getY()
+					));
 		}
 	}
 
-	// Inicializa o mapeamento das posições do ambiente
-	private Map<String, GridCell> initGridInformation() {
+	/*
+	 * Maps all positions available in the environment using a HashMap.
+	 * Where:
+	 * String - ID for a specific cell
+	 * GridCell - Cell Data
+	 * 
+	 */
+	private void initGridInformation() {
 
-		Map<String, GridCell> grid = new HashMap<String, GridCell>();
+	    	this.environmentGrid = new HashMap<String, GridCell>();
 		
-		for (int x = minGridSize; x <= maxGridSize; x++) {
-			for (int y = minGridSize; y <= maxGridSize; y++) {
+		for (int x = 0; x < this.maxGridSize; x++) {
+			for (int y = 0; y < this.maxGridSize; y++) {
 
 				String cellName = GridCell.getIndex(x, y);
-				grid.put(cellName, new GridCell(x, y, false));
-
+				this.environmentGrid.put(cellName, new GridCell(x, y, false));
 			}
 		}
-
-		return grid;
 	}
 
-	// Inicializa a lista de passageiros do ambiente
+	/*
+	 * Create a passenger list with 'nPassengers' passengers
+	 */
 	private void initPassengerList() {
 
-			for (int i = 0; i < maxInitPassengers; i++) {
-				int pickUpX = (int) (Math.random() * (maxGridSize+1));
-				int pickUpY = (int) (Math.random() * (maxGridSize+1));
-				int dropOffX = (int) (Math.random() * (maxGridSize+1));
-				int dropOffY = (int) (Math.random() * (maxGridSize+1));
-				passengers.add(new Passenger("" + i, pickUpX, pickUpY, dropOffX, dropOffY));
+			for (int i = 0; i < this.nPassengers; i++) {
+				int pickUpX = (int) (Math.random() * (this.maxGridSize));
+				int pickUpY = (int) (Math.random() * (this.maxGridSize));
+				int dropOffX, dropOffY;
+				do {
+				    dropOffX = (int) (Math.random() * (this.maxGridSize));
+				    dropOffY = (int) (Math.random() * (this.maxGridSize));
+				}while(pickUpX == dropOffX && pickUpY == dropOffY);
+				
+				
+				this.passengers.add(new Passenger("" + i, new Coordinate(pickUpX, pickUpY), new Coordinate(dropOffX, dropOffY)));
 				
 			}
 	}
 
-	// Inicializa a localização de obstáculos randômicos no ambiente. 
+	
+	/*
+	 * Set 'nObstacles' in the environment randomly.
+	 * Method checks if the coordinate (x,y) doesn't have a obstacle already have an obstacle.
+	 * Guarantees that there isn't an obstacle in the agent's initial position and in the depot's location.
+	 */
 	private void initObstacles() {
 		
 		int x, y;
 		for(int i = 0; i < this.nObstacles; i++) {
-			x = (int) (Math.random() * (maxGridSize+1));
-			y = (int) (Math.random() * (maxGridSize+1));
-			environmentGrid.get(GridCell.getIndex(x, y)).setHasObstacle(true);
+		    	do {
+		    	    x = (int) (Math.random() * maxGridSize);
+		    	    y = (int) (Math.random() * maxGridSize);
+		    	}while( this.environmentGrid.get(GridCell.getIndex(x, y)).hasObstacle() || 
+		    			( x == this.depotLocation.getX() && y == this.depotLocation.getY()) ||
+		    			( x == this.car.getX() && y == this.car.getY() )
+		    			);
+		    
+			environmentGrid.get(GridCell.getIndex(x, y)).setObstacle(true);
 		}
-		
 	}
 
 	
+	/*
+	 * Identifies possible agent's actions and properly invoke a method to handle each one of them
+	 * */
 	public Unifier executeAction(String agName, Action act) throws AILexception {
 
 		String actionName = act.getFunctor();
-		
-		/*
-		 * Aqui são identificas as ações realizadas pelo agente.
-		 * Para cada ação, os seus argumentos do predicado são 
-		 * atribuidos a variáveis e enviados para uma função, 
-		 * que realiza as operações necessárias.
-		 * */
-		
-
-		int fromX, fromY, x, y, destinationX, destinationY;
-		//Coordinate from, currentPosition, destination;
+	
+		Coordinate from = new Coordinate(0,0);
+		Coordinate currentPosition = new Coordinate(0,0);
+		Coordinate destination = new Coordinate(0,0);
 		String direction;
 		
 		switch(actionName) {
 		case "drive": 
-			fromX = Util.getIntTerm(act.getTerm(0));
-			fromY = Util.getIntTerm(act.getTerm(1));
+			from.setX( Util.getIntTerm(act.getTerm(0)) );
+			from.setY( Util.getIntTerm(act.getTerm(1)) );
+
 			direction = act.getTerm(2).getFunctor();
-			destinationX = Util.getIntTerm(act.getTerm(3));
-			destinationY = Util.getIntTerm(act.getTerm(4));
 			
-			drive(agName, new Coordinate(fromX, fromY), direction, new Coordinate(destinationX, destinationY));
+			destination.setX(Util.getIntTerm(act.getTerm(3)));
+			destination.setY(Util.getIntTerm(act.getTerm(4)));
+			
+			
+			drive(agName, from, direction, destination);
 			break;
 		case "compass": 
-			x = Util.getIntTerm(act.getTerm(0));
-			y = Util.getIntTerm(act.getTerm(1));
-			compass(agName, new Coordinate(x,y));
+			currentPosition.setX( Util.getIntTerm(act.getTerm(0)) );
+			currentPosition.setY( Util.getIntTerm(act.getTerm(1)) );
+			compass(agName, currentPosition);
 			break;
 		case "localize": 
 			localize(agName);
@@ -261,41 +260,29 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 			park(agName, parkType);
 			break;
 		case "no_further_from": 
-			fromX = Util.getIntTerm(act.getTerm(0));
-			fromY = Util.getIntTerm(act.getTerm(1));
-			x = Util.getIntTerm(act.getTerm(2));
-			y = Util.getIntTerm(act.getTerm(3));
-			destinationX = Util.getIntTerm(act.getTerm(4));
-			destinationY = Util.getIntTerm(act.getTerm(5));
+			from.setX( Util.getIntTerm(act.getTerm(0)) );
+			from.setY( Util.getIntTerm(act.getTerm(1)) );
+
+			currentPosition.setX( Util.getIntTerm(act.getTerm(2)) );
+			currentPosition.setY( Util.getIntTerm(act.getTerm(3)) );
 			
-			noFurtherFrom(agName, new Coordinate(fromX, fromY), new Coordinate(x, y), new Coordinate(destinationX, destinationY));
+			destination.setX(Util.getIntTerm(act.getTerm(4)));
+			destination.setY(Util.getIntTerm(act.getTerm(5)));
+			
+			noFurtherFrom(agName, from, currentPosition, destination);
+			
 			break;
 		case "call_emergency": 
-			x = Util.getIntTerm(act.getTerm(0));
-			y = Util.getIntTerm(act.getTerm(1));
-			callEmergency(agName, new Coordinate(x, y));
+			currentPosition.setX( Util.getIntTerm(act.getTerm(0)) );
+			currentPosition.setY( Util.getIntTerm(act.getTerm(1)) );
+
+			callEmergency(agName, currentPosition);
 			break;
 		case "get_assistance": 
-			x = Util.getIntTerm(act.getTerm(0));
-			y = Util.getIntTerm(act.getTerm(1));
-			getAssistance(agName, new Coordinate(x, y));
-			break;
-		case "a_m": 
-			// Exibe mensagens
-			String am = act.getTerm(0).getFunctor();
-			x = Util.getIntTerm(act.getTerm(1));
-			y = Util.getIntTerm(act.getTerm(2));
-			direction = act.getTerm(3).getFunctor();
-			destinationX = Util.getIntTerm(act.getTerm(4));
-			destinationY = Util.getIntTerm(act.getTerm(5));
-			
-			System.err.println(am + " - "+ direction +": ("+x+","+y+") to ("+destinationX+","+destinationY+")");
-			break;
-		case "message": 
-			System.err.println(String.format("%s says %s", agName, act.getTerm(0)));
-			break;
-		case "honk":
-			System.err.println("HONK"); 
+			currentPosition.setX( Util.getIntTerm(act.getTerm(0)) );
+			currentPosition.setY( Util.getIntTerm(act.getTerm(1)) );
+
+			getAssistance(agName, currentPosition);
 			break;
 			default:
 		}
@@ -304,19 +291,24 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 
 	}
 
+	
 	/*
-	 * A função drive recebe os seguintes valores:
-	 * 	String agName: Nome do agente
-	 *  Coordinate from: Coordenada do ponto de partida do agente
-	 *  String direction: Direção para qual o agente deseja se mover.
-	 *  Coordinate destination: Coordenada do destino do agente
+	 * Input:
+	 * 		String agName: Agent's Name
+	 *  		Coordinate from: Agent's current coordinate/position
+	 *  		String direction: Direction in which the agent is moving towards 
+	 *  		Coordinate destination: Position where the agent is trying to move to - Current Route Destination 
 	 *  
-	 *  Baseado na direção que o agente quer se mover, o ambiente calcula as novas coordenadas e envia novas percepções para o agente.
-	 *  Na sequência, o ambiente cria uma percepção 'adapt_from_to' baseado na posição atual 
-	 *  e uma percepção 'moved_from_to' na nova posição.
+	 *  Process:
+	 *  		Based in which direction the agent wants to move, this method invokes 'getDirectionCoordinate' to calculate the new direction.
+	 *  		After that, the agent 'percepts' its movement as the following beliefs 'adapt_from_to' and 'moved_from_to' are added to 
+	 *  			its belief base.
+	 *  		In order to update its location, 'updateLocation' method is called.
 	 *  
-	 *  Por fim, a função drive invoca o método updateLocation para atualizar as perpeções da posição do agente.
-	 * */
+	 *  Output:
+	 *  		Agent moves from one position to the other.
+	 * 
+	 */
 	private void drive(String agName, Coordinate from, String direction, Coordinate destination) {
 		
 		this.currentDirection = direction;
@@ -334,23 +326,23 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 		updateLocation(agName, car, newPosition);
 	}
 	
+	
 	/*
-	 * A função updateLocation possui os seguintes argumentos:
-	 * String agName: Nome do agente
-	 * Coordinate currentPosition: Coordenadas da posição atual do agente
-	 * Coordinate newPosition: Coordenadas da nova posição do agente
-	 * 
-	 * Remove a percepção sobre a posição antiga do agente,
-	 * atualiza a variável interna do ambiente que armazena a posição do agente, e adiciona a nova posição do agente.
-	 * Invoca o método  scanSurroundings com a nova posição do agente para verificar se há obstásculos ao redor do agente.
+	 * Input:
+	 * 		String agName: Agent's Name
+	 *  		Coordinate currentPosition: Agent's current coordinate/position
+	 *  		Coordinate newPosition: Position where the agent is going to move to
+	 *  
+	 *  Process:
+	 *  		Updates agent's location.
+	 *  		Invoke 'scanSurroundings' to scan all coordinates surrounding the agent.
+	 *  
+	 *  Output: 
+	 *  		Update agent's perception about its current location.
 	 * 
 	 */
 	private void updateLocation(String agName, Coordinate currentPosition, Coordinate newPosition) {	
-		if(simulate) {
-			client.sendMessage( client.convertArray2String( new String[] 
-					{"carLocation", String.valueOf(newPosition.getX()), String.valueOf(newPosition.getY()), this.currentDirection} ) );
-		}
-		
+	    
 		Predicate oldLocation = new Predicate("at");
 		oldLocation.addTerm(new NumberTermImpl(currentPosition.getX()));
 		oldLocation.addTerm(new NumberTermImpl(currentPosition.getY()));
@@ -361,40 +353,51 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 
 		car.setX(newPosition.getX());
 		car.setY(newPosition.getY());
+		
+		if(simulate) {
+		    
+		    try {
+			TimeUnit.MILLISECONDS.sleep(waitTimeLocation);
+		} catch(Exception e) {
+			System.err.println(e);
+		}
+			Client.sendMessage( Client.convertArray2String( new String[] 
+				{"carLocation", String.valueOf(newPosition.getX()), String.valueOf(newPosition.getY()), this.currentDirection} ) );
+			
+		}
 
 		scanSurroundings(agName, newPosition);
+		
 
 		removePercept(agName, oldLocation); 
 		addPercept(agName, at);
 	}
 
+	
 	/*
-	 * O método scanSurroundings possui os seguintes argumentos: 
-	 * String agName: Nome do agente
-	 * Coordinate currentPosition: Coordenadas com a posição que será verifica seus arredores.
-	 * 
-	 * scanSurroundings têm como função principal verificar a existência de obstáculos em qualquer direção que o agente possa vir a se movimentar.
-	 * Como o ambiente é estático, o agente mantêm suas crenças sobre obstáculos conhecidos.
-	 * 
-	 * Aqui é verificado se o cenário em que o veículo agente se encontra é possível que ocorra um acidente.
-	 * Caso uma colisão seja inevitável, sé verificado os níveis de dano causado pela colisão com cada obstáculo.
-	 * 
-	 * A verificação do cenário é feita da seguinte forma:
-	 * Se houver no mínimo três obstáculos ao redor do agente 
-	 * (Nota: Neste caso, três resultados da função verifyObstacle que não sejam o caracter 'N'), 
-	 * é gerado uma possibilidade randômicamente para que um acidente ocorra.
-	 * Neste cenário, o agente não pode direcionar-se para qualquer posição sem que haja uma colisão. 
-	 * Isto é, não pode 'dar ré' e voltar pelo caminho onde este veio.
-	 * Na ocorrência de um acidente (accidentChance é verdadeiro), o ambiente classifica os obstáculos por níveis de destruição.
-	 * E por fim, adiciona uma percepção que não é possível desviar dos obstáculos a partir da posição atual. 
-	 * 
-	 * Para controle interno do ambiente, o predicado unavoidableCollision é inserido em um ArrayList obstacleDamageRelated 
-	 * para que possa ser removido futuramente quando necessário.
-	 * 
-	 * Simulador: Caso o simulador esteja ativo, o ambiente é forçado a dormir (sleep) por 2 segundos, 
-	 * para que seja possível a visualização  gráfica da classificação dos níveis de dano de cada obstáculo.
-	 * 
-	 * */
+	 * Input:
+	 * 		String agName: Agent's Name
+	 *  		Coordinate currentPosition: Agent's current coordinate/position
+	 *  
+	 *  Process:
+	 *  		Verify the existence of obstacles in all directions surrounding the agent. 
+	 *  		Since we consider a static environment, all beliefs that refers to an obstacle keep stored in the agent's belief base.
+	 *  		
+	 *  		This method verifies the existence of a precondition for an unavoidable collision situation.
+	 *  			- If there are (at least) three obstacles surrounding the agent.
+	 *  			- The existence of an obstacle is given by the output of 'verifyObstacle'
+	 *  			- Finally, if the result given by 'collisionChance' is true, then a collision will occur in the agent's next movement.
+	 *  				- In this case, any direction that previously did not have an obstacle will be considered as having a 'temporary obstacle'.
+	 *  				- The method 'addObstacleDamage' is called to classify all obstacles.
+	 *  				- Agent is notify that its next movement will be a collision.
+	 *  
+	 *  		The variable 'obstacleDamageRelated' is used for environment control.
+	 *  
+	 *  
+	 *  Output: 
+	 *  		Agent's surroundings scanned.
+	 *  		
+	 */
 	private void scanSurroundings(String agName, Coordinate currentPosition) {
 		
 		char north = verifyObstacle(agName, "north", currentPosition);
@@ -413,64 +416,56 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 		if(west != 'N') 
 			obstacleAround++;
 		
-		if(obstacleAround >= 3 && simulate) {
-			
-			if(accidentChance.get_choice()) {
+		if(obstacleAround == 3 && collisionChance.get_choice()) {
 
-				addObstacleDamage(agName, north, "north", currentPosition);
-				addObstacleDamage(agName, south, "south", currentPosition);
-				addObstacleDamage(agName, east, "east", currentPosition);
-				addObstacleDamage(agName, west, "west", currentPosition);
-				
-				Predicate unavoidableCollision = new Predicate("unavoidable_collision");
-				unavoidableCollision.addTerm(new NumberTermImpl(currentPosition.getX()));
-				unavoidableCollision.addTerm(new NumberTermImpl(currentPosition.getY()));
-
-				obstacleDamageRelated.add(unavoidableCollision);
-				
-				addPercept(agName, unavoidableCollision);
-				
-				if(simulate) {
-					try {
-						TimeUnit.MILLISECONDS.sleep(waitTime);
-					} catch(Exception e) {
-						System.err.println(e);
-					}
+			if(simulate) {
+				try {
+					TimeUnit.MILLISECONDS.sleep(waitTimeDefault);
+				} catch(Exception e) {
+					System.err.println(e);
 				}
-				
 			}
+			
+		    	addObstacleDamage(agName, north, "north", currentPosition);
+			addObstacleDamage(agName, south, "south", currentPosition);
+			addObstacleDamage(agName, east, "east", currentPosition);
+			addObstacleDamage(agName, west, "west", currentPosition);
+				
+			Predicate unavoidableCollision = new Predicate("unavoidable_collision");
+			unavoidableCollision.addTerm(new NumberTermImpl(currentPosition.getX()));
+			unavoidableCollision.addTerm(new NumberTermImpl(currentPosition.getY()));
+
+			obstacleDamageRelated.add(unavoidableCollision);
+				
+			addPercept(agName, unavoidableCollision);
+				
+			if(simulate) {
+				try {
+					TimeUnit.MILLISECONDS.sleep(waitTimeDefault);
+				} catch(Exception e) {
+					System.err.println(e);
+				}
+			}
+			
 		}
 	}
 	
 	
-	/* 
-	 * O método addObstacleDamage recebe os seguintes argumentos:
-	 * char typeObstacle: Que identifica o tipo do obstáculo
-	 * 		'N' - Não há nenhum obstáculo nas coordenadaas currentPosition.
-	 * 		'O' - Há um obstáculo em currentPosition.
-	 * 		'F' - Há um obstáculo em currentPosition, mas este não é em uma posição esta mapeada pelo ambiente.
-	 * String direction: Direção em relação a currentPosition que o obstáculo está localizado.
-	 * Coordinate currentPosition: Coordenadas da posição que está sendo verificada seus arredores.
-	 * 
-	 * A função  addObstacleDamage tem como função inserir percepções sobre o nível de dano causado por possíveis colisões do veículo.
-	 * O único caso em que não é inserido informações sobre o dano do veículo
-	 * é quando o obstáculo é uma das fronteiras do mapeamento do ambiente.
-	 * É inserido o predicado obstacle_damage com os argumentos sobre a posição atual, a direção em que o obstáculo se encontra, 
-	 * e o nível de dano causado.
-	 * 
-	 * É também adiciona perpepções de obstáculo para as coordenadas que não possuiam um obstáculo previamente. 
-	 * De forma que se o agente mover-se para aquelas coordenadas, o mesmo irá processar aquilo como uma colisão. 
-	 * Além disso, é adicionado uma percepção informando para o agente que tal obstáculo é temporário.
-	 * 
-	 * Para controle interno do ambiente, o predicado obstacleDamage é inserido em um ArrayList obstacleDamageLevel 
-	 * para que possa ser removido futuramente se necessário.
-	 * 
-	 * É enviado mensagem para o simulador a partir desta função depende se o obstáculo é fronteira ou não (i.e., typeObstacle != 'F').
-	 * São enviados os seguintes dados: Coordenadas da posição atual do agente, 
-	 * direção do obstáculo em relação a posição atual e nível de dano causado em uma possível colisão.
-	 * A interpretação dos dados enviados é feita pelo simulador.
+	/*
+	 * Input:
+	 * 		String agName: Agent's Name
+	 * 		char typeObstacle: Identifies the type of obstacle in 'currentPosition'
+	 * 			'N' - No obstacle 
+	 * 			'O' - There is an obstacle
+	 * 			'F' - There is an obstacle, but 'currentPosition' isn't a valid position for the environment's grid.
+	 * 		String direction: Direction that 'currentPosition' is related to the agent's current location.
+	 *  		Coordinate currentPosition: Coordinates surrounding the agent's current location.
+	 *  
+	 *  Process/Output:
+	 *  		Classifies the damage level caused by an obstacle inside the environment and the agent perpects it.
 	 * 
 	 */
+	
 	private void addObstacleDamage(String agName, char typeObstacle, String direction, Coordinate currentPosition) {
 		String currentDamageLevel = " ";
 		
@@ -497,12 +492,6 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 				obstacleDamageRelated.add(tempObstacle);
 				
 			}
-			/*
-			if(direction.equals("south")) 
-				currentDamageLevel = "low";
-			else
-				currentDamageLevel = "high";
-			*/
 
 			obstacleDamage.addTerm(new Predicate( currentDamageLevel ));
 			
@@ -511,11 +500,11 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 			if(simulate) {
 				Coordinate directionPosition = getDirectionCoordinate(direction, currentPosition) ;
 				
-				client.sendMessage( client.convertArray2String( new String[] {"obstacleDamage", 
+				Client.sendMessage( new String[] {"obstacleDamage", 
 						String.valueOf(directionPosition.getX()),
 						String.valueOf(directionPosition.getY()),
 						currentDamageLevel
-				} ) );
+				} );
 			}
 			obstacleDamageRelated.add(obstacleDamage);
 			addPercept(agName, obstacleDamage);
@@ -525,23 +514,21 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 	
 	
 	/*
-	 * O método verifyObstacle possui os seguintes argumentos: 
-	 * String agName: Nome do agente
-	 * String direction: Direção que deseja ser verificada
-	 * Coordinate currentPosition: Posição atual do agente
+	 * Input:
+	 * 		String agName: Agent's Name
+	 * 		String direction: Direction that 'currentPosition' is related to the agent's current location.
+	 *  		Coordinate currentPosition: Coordinates surrounding the agent's current location.
 	 * 
-	 * A função verifica se há um obstáculo em qualquer direção (norte, sul, leste e oeste) em relação a currentPosition.
-	 * Caso sim, é adicionado novas perpeções no agente referentes aos obstáculos 
-	 * e em qual direção (north, south, east, west) está localizado em relação a posição atual do agente.
-	 * Nas coordenadas do próprio obstáculo, é adicionado uma percepção informando que naquela coordenada existe um obstáculo (center).
+	 * Process:
+	 * 		Verifies if 'currentPosition' is inside the environment's grid and if there's an obstacle in it.
 	 * 
-	 * As fronteiras do ambiente, ou seja, coordenadas que não são mapeadas pelo ambiente, são consideradas como obstáculos. 
-	 * 
-	 * O retorna da função é um char:
-	 * 'N' - Não há nenhum obstáculo nas coordenadaas surrondingPosition.
-	 * 'O' - Há um obstáculo em surrondingPosition.
-	 * 'F' - Há um obstáculo em surrondingPosition, mas este não é em uma posição esta mapeada pelo ambiente.
-	 * */
+	 * Output:
+	 * 		Return the classification of 'currentPosition'
+	 * 			'N' - No obstacle 
+	 * 			'O' - There is an obstacle
+	 * 			'F' - There is an obstacle, but 'currentPosition' isn't a valid position for the environment's grid.
+	 */
+	
 	private char verifyObstacle(String agName, String direction, Coordinate currentPosition) {
 		
 		Coordinate surroundingPosition = getDirectionCoordinate(direction, currentPosition);
@@ -550,8 +537,8 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 		boolean hasObstacle = false;
 		
 
-		if (	surroundingPosition.getX() < minGridSize || surroundingPosition.getX() > maxGridSize || 
-				surroundingPosition.getY() < minGridSize || surroundingPosition.getY() > maxGridSize) {
+		if (	surroundingPosition.getX() < 0 || surroundingPosition.getX() >= maxGridSize || 
+				surroundingPosition.getY() < 0 || surroundingPosition.getY() >= maxGridSize) {
 			hasObstacle = true;
 			typeObstacle = 'F';
 		} else {
@@ -560,8 +547,8 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 				typeObstacle = 'O';
 				
 				if(simulate) {
-					client.sendMessage( client.convertArray2String( new String[] {"obstacle", 
-							String.valueOf(surroundingPosition.getX()), String.valueOf(surroundingPosition.getY())} ) );
+					Client.sendMessage( new String[] {"obstacle", 
+							String.valueOf(surroundingPosition.getX()), String.valueOf(surroundingPosition.getY())}  );
 				}
 			}
 		}
@@ -574,15 +561,10 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 		return typeObstacle;
 	}
 
+
 	/*
-	 * O método addObstacle possui os seguintes argumentos:
-	 * String direction: Em qual direção o obstáculo está localizado
-	 * Coordinate coordinate: Coordenada do obstáculo
-	 * 
-	 * Esta função cria o predicado obstacle com os argumentos de direção, eixo X e eixo Y (representados por um objeto Coordinate) do obstáculo,
-	 * e adiciona uma perpeção ao agente.
-	 * 
-	 * */
+	 * Adds an new obstacle perception.
+	 */
 	private Predicate addObstacle(String direction, Coordinate coordinate) {
 		Predicate obstacle = new Predicate("obstacle");
 		obstacle.addTerm(new Predicate(direction));
@@ -594,17 +576,7 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 
 	
 	/*
-	 * O método addFromTo possui os seguintes argumentos:
-	 * String agName: Nome do agente
-	 * Predicate predicate: Nome do predicado que será criado. (adapt_from_to ou moved_from_to)
-	 * Coordinate from: Coordenadas do ponto de partida do agente na rota atual.
-	 * Coordinate current: Coordenadas posição atual do agente.
-	 * String direction: Direção em qual o agente deseja se mover.
-	 * Coordinate destination: Coordenadas do destino da rota atual.
-	 * 
-	 * Como os predicados adapt_from_to e moved_from_to possuem argumentos semelhantes, 
-	 * esta função têm como objetivo inserir ambos os tipos de percepções no agente.
-	 * 
+	 * Adds adapt_from_to or moved_from_to perceptions
 	 * */
 	private void addFromTo(String agName, Predicate predicate, Coordinate from, Coordinate current, String direction, Coordinate destination) {
 		predicate.addTerm(new NumberTermImpl(from.getX()));
@@ -618,7 +590,9 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 		addPercept(agName, predicate);
 	}
 
-	
+	/*
+	 * Adds adapt_from_to or moved_from_to perceptions
+	 * */
 	private void addAdaptAndMovedFromTo(
 			String agName, Coordinate from, Coordinate currentPosition, 
 			Coordinate destination, String moved, String adapt) {
@@ -632,8 +606,11 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 		
 	}
 	
-	private void noFurtherFrom(String agName, Coordinate from, Coordinate currentPosition, Coordinate destination) {
-			
+	
+	/*
+	 * Adds no_further perception
+	 * */
+	private void noFurtherFrom(String agName, Coordinate from, Coordinate currentPosition, Coordinate destination) {			
 		
 		System.err.println(
 				"Can't come here: at("+currentPosition.getX()+","+currentPosition.getY()+") "
@@ -657,16 +634,10 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 
 	}
 	
+	
 	/*
-	 * O método compass recebe os seguintes argumentos:
-	 * String agName: Nome do agente.
-	 * Coordinate coordinate: Coordenadas do destino do trajeto atual, para as quais deseja se verificar as direções.
-	 * 
-	 * Todas as crenças referentes a um direção são removidas do agente, 
-	 * e verifica-se quais direções o agente deve-se mover para atingir o destino atual.
-	 * Após a verificação, novas percepções sobre as direções são adicionadas ao agente.
+	 * Adds in which direction(s) the agent  has to move to achieve the end of its current route.
 	 */
-
 	private void compass(String agName, Coordinate coordinate) {
 		//System.err.println( String.format("Verifying direction for (%d,%d)", x,y) );
 
@@ -689,39 +660,35 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 
 	}
 
+	// Helper to 'compass'
 	private void addDirection(String agName, String direction) {
-
-		//System.err.println( String.format("go %s", direction) );
-
 		Predicate go = new Predicate(direction);
 		addPercept(agName, go);
 
 	}
-
+	// Helper to 'compass'
 	private void removeDirection(String agName, String direction) {
-
-		//System.err.println( String.format("go %s", direction) );
 
 		Predicate go = new Predicate(direction);
 		removePercept(agName, go);
 
 	}
 
+	
 	/*
-	 * O método refuseRide recebe os seguintes argumentos:
-	 * String agName: Nome do agente.
-	 * String refuseType: O motivo pelo qual o agente se recusa a realizar a corrida.
-	 * 
-	 * A única função do método é exibir um gráficamente a recusa do agente agName a terminar sua corrida atual.
-	 * Os tipos de recusa são:
-	 * pick_up: Agente não possui um passageiro e também não pode pega-lo.
-	 * drop_off: Agente possui um passageiro mas não conseguirá atingir o destino final.
-	 * car_unavailable: O veículo controlado pelo agente sofreu perca total e não pode mover-se.
-	 * 
-	 * 
+	 * Process agent's refusals to complete a ride, where 'refuseType' is the reason why.
 	 */
 	private void refuseRide(String agName, String refuseType) {
 
+	    	if(simulate)
+		{
+			try {
+				TimeUnit.MILLISECONDS.sleep(this.waitTimeDefault);
+			} catch(Exception e) {
+				System.err.println(e);
+			}
+		}
+	    
 		String type = "";
 		
 		switch (refuseType) {
@@ -737,22 +704,26 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 		default:
 			break;
 		}
-
+		
 		if(simulate)
-		{
-			client.sendMessage( client.convertArray2String( 
-					new String[] {"refuseRide", String.valueOf(car.getX()), String.valueOf(car.getY()), refuseType} ) );
-			try {
-				TimeUnit.MILLISECONDS.sleep(this.waitTime);
-			} catch(Exception e) {
-				System.err.println(e);
-			}
+		{	
+
+		    Client.sendMessage( 
+				new String[] {"refuseRide", String.valueOf(car.getX()), String.valueOf(car.getY()), refuseType} );
+		    try {
+			TimeUnit.MILLISECONDS.sleep(this.waitTimeDefault);
+		    } catch(Exception e) {
+			System.err.println(e);
+		    }
 		}
 		
+		
 		System.err.println(String.format("%s: %s can't finish ride for %s", type, agName, currentPassenger.getName()));
-
 	}
 
+	/*
+	 * Agent park action
+	 */
 	private void park(String agName, String parkType) {
 
 
@@ -776,25 +747,28 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 
 	}
 
+	/*
+	 * Provides the agent initial location
+	 */
 	private void localize(String agName) {
 
 		System.err.println("Initializing GPS");
 		System.err.println(String.format("Agent %s is at (%d,%d)", agName, car.getX(), car.getY()));
 
-		addGridMaxSize(agName);
 		addDepot(agName);
 
-		updateLocation(agName, new Coordinate(minGridSize, minGridSize), car);
+		updateLocation(agName, new Coordinate(0, 0), car);
 
 	}
 
+	/*
+	 * Add depot location
+	 */
 	private void addDepot(String agName) {
 		
 		if(simulate)
 		{
-			client.sendMessage( client.convertArray2String( 
-					new String[] {"depot", String.valueOf(depotLocation.getX()), String.valueOf(depotLocation.getY())} 
-					) );
+			Client.sendMessage(new String[] {"depot", String.valueOf(depotLocation.getX()), String.valueOf(depotLocation.getY())});
 			
 		}
 
@@ -805,17 +779,6 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 		addPercept(agName, depot);
 
 	}
-
-	private void addGridMaxSize(String agName) {
-
-		Predicate max = new Predicate("max");
-		max.addTerm(new NumberTermImpl(maxGridSize));
-		max.addTerm(new NumberTermImpl(maxGridSize));
-
-		addPercept(agName, max);
-
-	}
-
 
 	/*
 	 * O método getRide recebe o seguintes argumento:
@@ -832,15 +795,20 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 	 * Em ambos os casos, o ambiente informa ao agente por meio da percepção ride_info que os dados sobre uma possível corrida foram atualizados. 
 	 * 
 	 */
+	
+	/*
+	 * Provides a new ride to the agent and removes any current belief to previous passengers.
+	 * If the passenger list is empty,  a belief 'no_possible_new_ride' and the agent stop its process.
+	 */
 	private void getRide(String agName) {
 		
 		Predicate pickUpLast = new Predicate("pick_up");
-		pickUpLast.addTerm(new NumberTermImpl(currentPassenger.getPickUpX()));
-		pickUpLast.addTerm(new NumberTermImpl(currentPassenger.getPickUpY()));
+		pickUpLast.addTerm(new NumberTermImpl(currentPassenger.getPickUp().getX()));
+		pickUpLast.addTerm(new NumberTermImpl(currentPassenger.getPickUp().getY()));
 
 		Predicate dropOffLast = new Predicate("drop_off");
-		dropOffLast.addTerm(new NumberTermImpl(currentPassenger.getDropOffX()));
-		dropOffLast.addTerm(new NumberTermImpl(currentPassenger.getDropOffY()));
+		dropOffLast.addTerm(new NumberTermImpl(currentPassenger.getDropOff().getX()));
+		dropOffLast.addTerm(new NumberTermImpl(currentPassenger.getDropOff().getY()));
 
 		removePercept(agName, pickUpLast);
 		removePercept(agName, dropOffLast);
@@ -855,16 +823,18 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 			currentPassenger = passengers.get(0);
 			passengers.remove(0);
 
-			int pickUpX = currentPassenger.getPickUpX();
-			int pickUpY = currentPassenger.getPickUpY();
+			int pickUpX = currentPassenger.getPickUp().getX();
+			int pickUpY = currentPassenger.getPickUp().getY();
 
-			int dropOffX = currentPassenger.getDropOffX();
-			int dropOffY = currentPassenger.getDropOffY();
+			int dropOffX = currentPassenger.getDropOff().getX();
+			int dropOffY = currentPassenger.getDropOff().getY();
 			
 			if(simulate)
 			{
-				client.sendMessage( client.convertArray2String( new String[] {"pickUp", String.valueOf(pickUpX), String.valueOf(pickUpY)} ) );
-				client.sendMessage( client.convertArray2String( new String[] {"dropOff", String.valueOf(dropOffX), String.valueOf(dropOffY)} ) );
+				Client.sendMessage( 
+					new String[] {"pickUp", String.valueOf(pickUpX), String.valueOf(pickUpY)} );
+				Client.sendMessage( 
+					new String[] {"dropOff", String.valueOf(dropOffX), String.valueOf(dropOffY)});
 			}
 
 			
@@ -901,6 +871,10 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 	 * Para controle interno do ambiente, o predicado emergency é inserido em um ArrayList obstacleDamageRelated 
 	 * para que possa ser removido futuramente quando necessário.
 	 */
+	
+	/*
+	 * 'Call emergency' to handle crashes.
+	 */
 	private void callEmergency(String agName, Coordinate currentPosition) {
 
 		System.err.println(String.format("%s crashed in (%d,%d). Calling Emergency.", agName, currentPosition.getX(), currentPosition.getY()));
@@ -912,23 +886,12 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 		this.obstacleDamageRelated.add(emergency);
 		
 		addPercept(agName, emergency);
-		
 
 	}
 	
 
 	/*
-	 * A função getAssistance recebe os seguintes argumentos:
-	 * String agName: Nome do agente
-	 * Coordinate currentPosition: Coordenadas onde o agente colidiu.
-	 * 
-	 * O objetivo deste método é remover os dados referentes aos níveis de 
-	 * dano dos obstáculos que o agente colidiu e ou poderia ter colidido. Sendo estes os predicados contidos em obstacleDamageRelated.
-	 * E finalmente, adicionar uma percepção, assisted, referente ao fato de que o 
-	 * agente está pronto para continuar com seu trajeto.
-	 * 
-	 * O ambiente também informa o simulador para remover os dados sobre os níveis de dano de cada obstáculo.
-	 * 
+	 * Waits for 'emergency' assistance after a crash.
 	 */
 	private void getAssistance(String agName, Coordinate currentPosition) {
 		
@@ -939,14 +902,14 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 		
 		if(simulate) {
 			try {
-				TimeUnit.MILLISECONDS.sleep(this.waitTime);
+				TimeUnit.MILLISECONDS.sleep(this.waitTimeDefault);
 			} catch(Exception e) {
 				System.err.println(e);
 			}
 		}
 		
 		if(simulate) {
-			client.sendMessage( client.convertArray2String( new String[] {"removeObstacleDamage"} ) );
+			Client.sendMessage( new String[] {"removeObstacleDamage"} );
 		}
 		
 		Predicate assisted = new Predicate("assisted");
@@ -957,8 +920,7 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness { //DefaultE
 
 	
 	/*
-	 * Recebe como argumentos uma direção e uma coordenada.
-	 * Calcula os valores se movimentar naquela direção a partir daquela coordenada.
+	 * Return a new coordinate given a position and a direction.
 	 * */
 	private Coordinate getDirectionCoordinate(String direction, Coordinate coordinate) {
 		Coordinate newCoordinate;

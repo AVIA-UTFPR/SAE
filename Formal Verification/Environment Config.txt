@@ -1,0 +1,143 @@
+
+
+		//car = new Coordinate(4,4);
+		//depotLocation = new Coordinate(0,0);
+
+
+		//passengers.add(new Passenger("FAR_6", new Coordinate(1, 2), new Coordinate(4, 2) ));
+		//passengers.add(new Passenger("FAR_6", new Coordinate(4, 2), new Coordinate(4, 1) ));
+
+		//environmentGrid.get(GridCell.getIndex(2,4)).setObstacle(true);
+		//environmentGrid.get(GridCell.getIndex(1,4)).setObstacle(true);
+		//environmentGrid.get(GridCell.getIndex(3,4)).setObstacle(true);
+
+
+		/*
+		 *
+		passengers.add(new Passenger("FAR_6", new Coordinate(0, 0), new Coordinate(0, 1) ));
+		passengers.add(new Passenger("FAR_6", new Coordinate(0, 1), new Coordinate(0, 2) ));
+		passengers.add(new Passenger("FAR_6", new Coordinate(0, 2), new Coordinate(0, 3) ));
+		passengers.add(new Passenger("FAR_6", new Coordinate(0, 3), new Coordinate(0, 4) ));
+		passengers.add(new Passenger("FAR_6", new Coordinate(0, 4), new Coordinate(0, 5) ));
+
+		passengers.add(new Passenger("FAR_6", new Coordinate(0, 5), new Coordinate(0, 6) ));
+		passengers.add(new Passenger("FAR_6", new Coordinate(0, 6), new Coordinate(0, 7) ));
+		passengers.add(new Passenger("FAR_6", new Coordinate(0, 7), new Coordinate(0, 8) ));
+		passengers.add(new Passenger("FAR_6", new Coordinate(0, 8), new Coordinate(0, 9) ));
+		passengers.add(new Passenger("FAR_6", new Coordinate(0, 9), new Coordinate(0, 10) ));
+		 */
+
+		//passengers.add(new Passenger("FAR_6", new Coordinate(1, 1), new Coordinate(0, 2) ));
+		//environmentGrid.get(GridCell.getIndex(3,2)).setObstacle(true);
+
+		/*
+		 * FAR_1
+		this.car.setX(0);
+		this.car.setX(0);
+		 */
+			//FAR_6
+		this.car.setX(1);
+		this.car.setY(0);
+		maxGridSize = 5;
+		passengers.add(new Passenger("FAR_6", new Coordinate(1, 1), new Coordinate(1, 2) ));
+		passengers.add(new Passenger("FAR_6", new Coordinate(1, 3), new Coordinate(1, 4) ));
+
+
+		/*
+		 * FAR_7
+		this.car.setX(1);
+		this.car.setY(0);
+		maxGridSize = 5;
+		passengers.add(new Passenger("FAR_7", new Coordinate(1, 1), new Coordinate(2, 1) ));
+		passengers.add(new Passenger("FAR_7", new Coordinate(1, 2), new Coordinate(2, 1) ));
+		//passengers.add(new Passenger("FAR_7", new Coordinate(1, 1), new Coordinate(1, 2) ));
+		environmentGrid.get(GridCell.getIndex(1,2)).setObstacle(true);
+		 */
+
+		/*
+		 * FAR_8_1_8_2
+		this.car.setX(1);
+		this.car.setY(0);
+		passengers.add(new Passenger("FAR_8_1_8_2", new Coordinate(1, 1), new Coordinate(1, 2)));
+		 */
+
+		/*
+		 * FAR_8_1_8_3
+		this.car.setX(1);
+		this.car.setY(0);
+		passengers.add(new Passenger("FAR_8_1_8_3", new Coordinate(1, 2), new Coordinate(1, 3)));
+		environmentGrid.get(GridCell.getIndex(1,2)).setObstacle(true);
+		 */
+
+
+
+		/*
+		 * DT_DIRECTIONS
+		 *
+		this.car.setX(0);
+		this.car.setY(0);
+		passengers.add(new Passenger("DT_DIRECTIONS", new Coordinate(0, 0), new Coordinate(0, 2))); // Somente Norte
+		passengers.add(new Passenger("DT_DIRECTIONS", new Coordinate(0, 2), new Coordinate(2, 2))); // Somente Leste
+		passengers.add(new Passenger("DT_DIRECTIONS", new Coordinate(2, 2), new Coordinate(2, 0))); // Somente Sul
+		passengers.add(new Passenger("DT_DIRECTIONS", new Coordinate(2, 0), new Coordinate(1, 0))); // Somente Oeste
+
+		passengers.add(new Passenger("DT_DIRECTIONS", new Coordinate(2, 0), new Coordinate(4, 3))); // Norte-Leste
+		passengers.add(new Passenger("DT_DIRECTIONS", new Coordinate(4, 3), new Coordinate(2, 1))); // Sul-Oeste
+		passengers.add(new Passenger("DT_DIRECTIONS", new Coordinate(2, 1), new Coordinate(0, 3))); // Norte-Oeste
+		passengers.add(new Passenger("DT_DIRECTIONS", new Coordinate(0, 3), new Coordinate(1, 1))); // Sul-Leste
+
+		*/
+
+		/*
+		 * AR_5
+		this.car.setX(1);
+		this.car.setY(0);
+		passengers.add(new Passenger("ADAPT_ROUTE", new Coordinate(1, 0), new Coordinate(2, 2)));
+		 */
+
+		/*
+		 * AR_6
+		this.car.setX(1);
+		this.car.setY(3);
+		passengers.add(new Passenger("ADAPT_ROUTE", new Coordinate(1, 3), new Coordinate(1, 0)));
+		 */
+		//passengers.add(new Passenger("ADAPT_ROUTE", new Coordinate(0, 2), new Coordinate(2, 1)));
+
+		/*
+		 * AR_8
+		this.car.setX(1);
+		this.car.setY(1);
+		passengers.add(new Passenger("ADAPT_ROUTE", new Coordinate(1, 1), new Coordinate(3, 1)));
+		environmentGrid.get(GridCell.getIndex(2,1)).setObstacle(true);
+		environmentGrid.get(GridCell.getIndex(2,2)).setObstacle(true);
+		environmentGrid.get(GridCell.getIndex(1,3)).setObstacle(true);
+		 */
+
+
+		/*
+		 * COC
+		 *
+		this.car.setX(2);
+		this.car.setY(1);
+		depotLocation = new Coordinate(4,0);
+		passengers.add(new Passenger("COC", new Coordinate(4, 1), new Coordinate(4, 0)));
+		environmentGrid.get(GridCell.getIndex(1,1)).setObstacle(true);
+		environmentGrid.get(GridCell.getIndex(2,2)).setObstacle(true);
+		environmentGrid.get(GridCell.getIndex(2,0)).setObstacle(true);
+		*/
+
+
+
+		/*
+		 * ADD_OBSTACLE_1
+		 * ADD_OBSTACLE_2
+		this.car.setX(1);
+		this.car.setY(0);
+		passengers.add(new Passenger("ADD_OBSTACLE", 1, 1, 2, 1));
+		environmentGrid.get(GridCell.getIndex(1,2)).setHasObstacle(true);
+		 */
+
+		/*
+		 * Cenário XX - Ocorrência de um acidente - Todos obstáculos são mapeados pelo ambiente
+		 * */
+		

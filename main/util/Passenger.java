@@ -4,46 +4,31 @@ public class Passenger {
 	
 	private String name;
 
-	private int pickUpX;
-	private int pickUpY;
+	private Coordinate pickUp;
+	private Coordinate dropOff;
 	
-	private int dropOffX;
-	private int dropOffY;
-
-	public Passenger(int pickUpX, int pickUpY, int dropOffX, int dropOffY) {
-		this.pickUpX = pickUpX;
-		this.pickUpY = pickUpY;
-		
-		this.dropOffX = dropOffX;
-		this.dropOffY = dropOffY;
+	public Passenger(Coordinate pickUp, Coordinate dropOff) {
+		this.pickUp = pickUp;
+		this.dropOff = dropOff;
 	}
 	
-	public Passenger(String name, int pickUpX, int pickUpY, int dropOffX, int dropOffY) {
+	public Passenger(String name, Coordinate pickUp, Coordinate dropOff) {
 		this.name = name;
-		
-		this.pickUpX = pickUpX;
-		this.pickUpY = pickUpY;
-		
-		this.dropOffX = dropOffX;
-		this.dropOffY = dropOffY;
+
+		this.pickUp = pickUp;
+		this.dropOff = dropOff;
 	}
 	
 	public String getName() {
 		return name;
 	}
 
-	public int getPickUpX() {
-		return pickUpX;
-	}
-	public int getPickUpY() {
-		return pickUpY;
+	public Coordinate getPickUp() {
+		return pickUp;
 	}
 
-	public int getDropOffX() {
-		return dropOffX;
-	}
-	public int getDropOffY() {
-		return dropOffY;
+	public Coordinate getDropOff() {
+		return dropOff;
 	}
 
 }

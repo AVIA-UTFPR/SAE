@@ -1,4 +1,6 @@
-package _004_someone_need_a_cab;
+/*
+ * 
+ * package _004_someone_need_a_cab;
 
 import java.util.ArrayList;
 
@@ -39,19 +41,6 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness{
 	}
 
 	private void initPassengerList() {
-		/*
-		passengers.add(new Passenger("north" , 0, 0, 0, 5) );
-		passengers.add(new Passenger("south" , 0, 5, 0, 0) );
-		passengers.add(new Passenger("east" , 0, 0, 5, 0) );
-		passengers.add(new Passenger("west" , 5, 0, 0, 0) );
-
-		passengers.add(new Passenger("north and east" , 0, 0, 5, 5) );
-		passengers.add(new Passenger("north and west" , 5, 5, 0, 10) );
-		
-		passengers.add(new Passenger("south and east" , 5, 5, 0, 10) );
-		passengers.add(new Passenger("south and west" , 5, 5, 0, 0) );
-		*/
-		
 		
 		for(int i = 0; i < maxInitPassengers; i++) {
 
@@ -230,3 +219,4 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness{
 	}
 
 }
+*/

@@ -5,7 +5,7 @@ import java.net.*;
 public class Client {
 
 	/* Recebe um array String e retorna-o em formato String */
-	public String convertArray2String(String[] stringArray) {
+	public static String convertArray2String(String[] stringArray) {
 		
 		String stringConverted = "";
 		
@@ -20,23 +20,26 @@ public class Client {
 	 * Realiza a comunicação com o servidor utilizando o protocolo UDP.
 	 * Recebe String message como parâmetro, transforma seu valor em array de bytes e envia para o servidor/simulador.
 	 *  */
-	public void sendMessage (String message) {
+	public static void sendMessage (String message) {
 		try {
     		
-			DatagramSocket client = new DatagramSocket();
-			InetAddress IPAddress = InetAddress.getByName("localhost");
+		    	DatagramSocket client = new DatagramSocket();
+		    	InetAddress IPAddress = InetAddress.getByName("localhost");
 			byte[] sendData = new byte[1024];
 			
-			// Transformar String em Bytes
 			sendData = message.getBytes();
 			
 			DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 9999);
 			client.send(sendPacket);
 			
 			client.close();
-    	}
-    	catch (Exception e) {
-			System.out.println(e);
-    	}
+        	}
+        	catch (Exception e) {
+    			System.out.println(e);
+        	}
+	}
+	
+	public static void sendMessage(String[] stringArray) {
+	    sendMessage (convertArray2String (stringArray) );
 	}
 }

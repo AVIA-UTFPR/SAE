@@ -31,6 +31,7 @@ public class GridCell {
 		this.hasObstacle = hasObstacle;
 		this.isVisible = isVisible;
 	}
+	
 	public GridCell(int gridX, int gridY, boolean hasObstacle, boolean isVisible, String damageLevel) {
 		this.coordinate = new Coordinate(gridX, gridY);
 		this.hasObstacle = hasObstacle;
@@ -39,14 +40,11 @@ public class GridCell {
 	}
 	
 
-	public int getgridX() {
-		return this.coordinate.getX();
-	}
-	public int getGridY() {
-		return this.coordinate.getY();
+	public Coordinate getCoordinate() {
+		return this.coordinate;
 	}
 
-	public void setHasObstacle(boolean hasObstacle) {
+	public void setObstacle(boolean hasObstacle) {
 		this.hasObstacle = hasObstacle;
 	}
 	public boolean hasObstacle() {

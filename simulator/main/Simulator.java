@@ -28,22 +28,29 @@ public class Simulator extends JComponent{
 	private int width = 800;
 	private int height = 800;
 	
-	private int gridSize = 5;
-	private int gridAmplifier = 50;
+	private int gridSize = 7;
+	private int gridAmplifier = 55;
 
 	private Coordinate car = new Coordinate(0, 0); // Coordenada onde o agente está localizado.
+	private Color carColor = Color.BLUE;
 	private String direction = "north"; // Direção em qual o agente está se movendo.
 	private boolean ableToMove = true; // Indica se o veículo é capaz de se mover.
+	private boolean isCrashed = false;
 	
 	
 	private Coordinate depot = new Coordinate(0, 0);
+	private Color depotColor = Color.green;
 	private Map<String, GridCell> environmentGrid;
 
 
 	private Coordinate pickUp = new Coordinate(gridSize-1, gridSize-1); // Indica a coordenada que é o ponto de pegada do passageiro na corrida atual.
-	private boolean canPickUp = true; // Informa se é possível atingir na coordenada pickUp.
-	private Coordinate dropOff = new Coordinate(gridSize, gridSize); // Indica a coordenada que é o destino da corrida atual.
-	private boolean canDropOff = true; // Informa se é possível chegar na coordenada dropOff.
+	private Color pickUpColor = Color.cyan;
+	
+	private Coordinate dropOff = new Coordinate(gridSize-2, gridSize-2); // Indica a coordenada que é o destino da corrida atual.
+	private Color dropOffColor = Color.yellow;
+	
+	private boolean refuseRide = false;
+	private boolean parked = true;
 	
 	// Definição das cores para cada nível de dano que um obstáculo pode causar.
 
@@ -72,8 +79,8 @@ public class Simulator extends JComponent{
 
 		environmentGrid = new HashMap<String, GridCell>();
 		
-		for (int x = 0; x <= gridSize; x++) {
-			for (int y = 0; y <= gridSize; y++) {
+		for (int x = 0; x < gridSize; x++) {
+			for (int y = 0; y < gridSize; y++) {
 
 				String cellName = GridCell.getIndex(x, y);
 				environmentGrid.put(cellName, new GridCell(x, y, false, false));
@@ -85,19 +92,19 @@ public class Simulator extends JComponent{
 	protected void drawLineGrid(Graphics g) {
 		// Desenha as linhas do grid
 		g.setColor( new Color(0, 0, 0) );
-		for (int x = 0; x <= this.gridSize + 1; x++){
-			g.drawLine(convertX(amplify(x)), convertY(0), convertX(amplify(x)), convertY( amplify(gridSize + 1) ));
+		for (int x = 0; x <= this.gridSize ; x++){
+			g.drawLine(convertX(amplify(x)), convertY(0), convertX(amplify(x)), convertY( amplify(gridSize) ));
 		}
 		
-		for (int y = 0; y <= this.gridSize + 1; y++){
-			g.drawLine(convertX(0), convertY( amplify(y) ), convertX( amplify(gridSize + 1) ), convertY( amplify(y) ));
+		for (int y = 0; y <= this.gridSize ; y++){
+			g.drawLine(convertX(0), convertY( amplify(y) ), convertX( amplify(gridSize) ), convertY( amplify(y) ));
 		}
 		
-		for (int x = 0; x <= this.gridSize; x++){
+		for (int x = 0; x < this.gridSize; x++){
 			g.drawString(String.valueOf(x), convertX( amplify(x) + (int) (this.gridAmplifier * 0.4)), convertY( -20 ));
 		}
 		
-		for (int y = 0; y <= this.gridSize; y++) {
+		for (int y = 0; y < this.gridSize; y++) {
 			g.drawString(String.valueOf(y), convertX( -15 ), convertY( amplify(y) + (int) (this.gridAmplifier * 0.4) ));
 		}
 	}
@@ -107,8 +114,8 @@ public class Simulator extends JComponent{
 		
 		if (!this.ableToMove) {
 			g.setColor(Color.RED);
-			for (int x = 0; x <= this.gridSize; x++) {
-				for (int y = 0; y <= this.gridSize; y++) {
+			for (int x = 0; x < this.gridSize; x++) {
+				for (int y = 0; y < this.gridSize; y++) {
 					g.fillRect( getGridX( x ), getGridY( y ), this.gridAmplifier, this.gridAmplifier);
 
 				}
@@ -125,8 +132,8 @@ public class Simulator extends JComponent{
 		
 		boolean isVisible, hasObstacle, hasDamageLevel;
 		
-		for (int x = 0; x <= this.gridSize; x++) {
-			for (int y = 0; y <= this.gridSize; y++) {
+		for (int x = 0; x < this.gridSize; x++) {
+			for (int y = 0; y < this.gridSize; y++) {
 				
 				isVisible = this.environmentGrid.get(GridCell.getIndex(x, y)).isVisible();
 				hasObstacle = this.environmentGrid.get(GridCell.getIndex(x, y)).hasObstacle();
@@ -158,36 +165,45 @@ public class Simulator extends JComponent{
 					g.setColor(Color.BLACK);
 					g.fillRect( getGridX( x ), getGridY( y ), this.gridAmplifier, this.gridAmplifier);
 				}
+ 
 
 			}
 		}
-
+		
+		if(parked) {
+			g.setColor(Color.LIGHT_GRAY);
+			g.fillRect(getXReduced(car.getX(), 95), getYReduced(car.getY(), 95), reducedSize(95), reducedSize(95));
+		}
+		if(isCrashed) {
+			g.setColor(Color.MAGENTA);
+			g.fillRect( getGridX( car.getX() ) , getGridY( car.getY() ), this.gridAmplifier, this.gridAmplifier);
+		}
+		
+ 
 		// Draw Depot
-		g.setColor(Color.green);
-		g.fillRect(getGridX(depot.getX()), getGridY(depot.getY()), this.gridAmplifier, this.gridAmplifier);
-
+		g.setColor(depotColor);
+		g.fillRect(getXReduced(depot.getX(), 90), getYReduced(depot.getY(), 90), reducedSize(90), reducedSize(90));
+		
 		// Draw pick up
-		g.setColor(Color.CYAN);
+		g.setColor(pickUpColor);
 		g.fillOval(getXReduced(pickUp.getX(), 80), getYReduced(pickUp.getY(), 80), reducedSize(80), reducedSize(80));
 		
 		// Draw drop off
-		g.setColor(Color.yellow);
+		g.setColor(dropOffColor);
 		g.fillOval(getXReduced(dropOff.getX(), 70), getYReduced(dropOff.getY(), 70), reducedSize(70), reducedSize(70));
-		
-
 		g.setColor(Color.RED);
-		if( !this.canPickUp ) {
+		if( this.refuseRide ) {
 			g.drawLine(getGridX(pickUp.getX()), getGridY(pickUp.getY()), getGridX(pickUp.getX()) + this.gridAmplifier, getGridY(pickUp.getY()) + this.gridAmplifier);
 			g.drawLine(getGridX(pickUp.getX()), getGridY(pickUp.getY()) + this.gridAmplifier, getGridX(pickUp.getX()) + this.gridAmplifier, getGridY(pickUp.getY()));
-		}
-		if( !this.canDropOff ) {
 			g.drawLine(getGridX(dropOff.getX()), getGridY(dropOff.getY()), getGridX(dropOff.getX()) + this.gridAmplifier, getGridY(dropOff.getY()) + this.gridAmplifier);
 			g.drawLine(getGridX(dropOff.getX()), getGridY(dropOff.getY()) + this.gridAmplifier, getGridX(dropOff.getX()) + this.gridAmplifier, getGridY(dropOff.getY()));
 		}
 
 		
+ 
+
+		
 		// Draw Car
-		g.setColor(Color.BLUE);
 		int [] xPoints = null;
 		int [] yPoints = null;
 
@@ -210,13 +226,183 @@ public class Simulator extends JComponent{
 			yPoints = new int[]{ getYReduced(car.getY(), 90), (int) (getYReduced(car.getY(), 90) + reducedSize(90)/2), getYReduced(car.getY(), 90) + reducedSize(90)};
 			break;
 		}
+		g.setColor(carColor);
 		g.fillPolygon(xPoints, yPoints, 3);
+		g.setColor(Color.BLACK);
+		g.drawPolygon(xPoints, yPoints, 3);
 		
 		// Desenha as linhas do grid
 		drawLineGrid(g);
 		
 	}
 
+	
+	/*
+	 * O método readReceivedMessage realiza o processamente da mensagem.
+	 * Por meio da interpretação da mensagem, é atualizado as variáveis do simulador para sua exibição gráfica.
+	 * 
+	 * A mensagem recebida é do tipo String, onde cada argumento da mensagem é separado por ponto-e-vírgula (;).
+	 * O processamento da mensagem é feito da seguinte forma: 
+	 * A mensagem é separada e tranformada em um array de String, messageArray, 
+	 * onde a primeira posição identifica o tipo da mensagem, messageArray[0]. 
+	 * Para cada tipo de mensagem, uma atualização diferente é realizada. A identificação de cada mensagem é feito por meio de um switch().
+	 */
+	private void readReceivedMessage(String message) {
+		
+		String[] messageArray = message.split(";");
+		String switchMessage = messageArray[0];
+		
+		int x = 0,  y = 0;
+		String d;
+	
+		
+		if( !(switchMessage.equals("clear") || switchMessage.equals("removeObstacleDamage")) ) {
+			x = Integer.parseInt( messageArray[1] );
+			y = Integer.parseInt( messageArray[2] );
+		}
+		
+		switch(switchMessage) {
+			case	"clear": 
+			    this.gridSize = Integer.parseInt( messageArray[1] );
+			    this.ableToMove = true;
+			    carColor = Color.blue;
+			    initGridInformation();
+			    break;
+			case	"depot":
+				depot.setX( Integer.parseInt( messageArray[1] ) );
+				depot.setY( Integer.parseInt( messageArray[2] ) );
+				this.environmentGrid.get( GridCell.getIndex(x, y) ).setIsVisible(true);
+				break;
+			case	"carLocation":
+				d = messageArray[3];
+				car.setX( x );
+				car.setY( y );
+				
+				this.direction = d;
+				
+				this.environmentGrid.get( GridCell.getIndex(x, y) ).setIsVisible(true);
+				
+				if(y < (this.gridSize-1))
+					this.environmentGrid.get( GridCell.getIndex(x, y+1) ).setIsVisible(true);
+				if(y > 0)
+					this.environmentGrid.get( GridCell.getIndex(x, y-1) ).setIsVisible(true);
+				if(x < (this.gridSize-1))
+					this.environmentGrid.get( GridCell.getIndex(x+1, y) ).setIsVisible(true);
+				if(x > 0)
+					this.environmentGrid.get( GridCell.getIndex(x-1, y) ).setIsVisible(true);
+				
+				if(  	(car.getX() == pickUp.getX() && car.getY() == pickUp.getY()) ||
+					(car.getX() == dropOff.getX() && car.getY() == dropOff.getY()) ||
+					(car.getX() == depot.getX() && car.getY() == depot.getY())
+					)
+				    parked = true;
+				else
+				    parked = false;
+				
+				isCrashed = false;
+				String damageLevel = this.environmentGrid.get( GridCell.getIndex(x, y) ).getDamageLevel();
+				
+				if( !damageLevel.equals("none") ){
+				    
+				    if(damageLevel.equals("high")) carColor = high;
+				    else if(damageLevel.equals("moderate") && carColor != high) carColor = moderate;
+				    else if(damageLevel.equals("low") && carColor != moderate) carColor = low;
+				    
+				    isCrashed = true;
+				}
+				break;
+			case	"obstacle":
+				this.environmentGrid.get( GridCell.getIndex(x, y) ).setObstacle(true);
+				break;
+			case	"pickUp":
+				/*
+				 * Atualiza o ponto de pegada do passeiro.
+				 */
+				this.pickUp.setX( x );
+				this.pickUp.setY( y ); 
+				this.refuseRide = false;
+				break;
+			case	"dropOff":
+				/*
+				 * Atualiza o ponto de destino do passeiro.
+				 */
+				this.dropOff.setX( x );
+				this.dropOff.setY( y ); 
+				break;
+				
+			case "obstacleDamage":
+				/*
+				 * Com base nas coordenadas x e y informadas, a posição (x,y) do grid interno (environmentGrid) 
+				 * é atualizado com a informações sobre o nível de dado definido pelo ambiente do agente.
+				 * */ 
+				this.environmentGrid.get( GridCell.getIndex(x, y) ).setDamageLevel(messageArray[3]);
+				break;
+			case "removeObstacleDamage":
+				/*
+				 * Define o valor "none" para todas as coordenadas do do grid interno (environmentGrid). 
+				 * */ 
+				for (int X = 0; X < this.gridSize; X++) {
+					for (int Y = 0; Y < this.gridSize; Y++) {
+						this.environmentGrid.get( GridCell.getIndex(X, Y)).setDamageLevel("none");
+					}
+				}
+				break;
+			case "refuseRide":
+				/*
+				 * Quando o agente recusa terminar uma corrida.
+				 * Caso pick_up: Ambas coordenadas de pickUp e dropOff exibem um 'X' indicando que não é possível chegar naquela localidade 
+				 * 				(são atualizas as variáveis canPickUp e canDropOff).
+				 * Caso drop_off: A coordenada dropOff exibe um 'X' indicando que não é possível chegar naquela localidade
+				 * 				(é atualizada a variável canDropOff).
+				 * Caso car_unavailable: Todas as coordendas do grid são preenchidas com a cor vermelha. 
+				 * 				
+				 */
+				String type = messageArray[3];
+				switch(type) {
+				case "pick_up":
+					this.refuseRide = true;
+					break;
+				case "drop_off":
+				    	parked = true;
+					this.refuseRide = true;
+					break;
+				case "car_unavailable":
+					this.ableToMove = false;
+					break;
+				}
+				break;
+			default:
+				System.out.println("Erro");
+				System.out.println(messageArray[0]);
+		}
+		
+		repaint();
+	}
+	
+	
+	public static void main(String args[]){
+		
+		Simulator sim = new Simulator();
+		
+		try {
+
+			server = new DatagramSocket(9999);
+			byte[] receive = new byte[1024];
+			
+			while(true)
+			{
+				DatagramPacket receivePacket = new DatagramPacket(receive, receive.length); // Pacote Recebido
+				server.receive(receivePacket);
+				
+				String sentence = new String( receivePacket.getData() );
+				sim.readReceivedMessage(sentence);
+			}
+		}
+		catch (Exception e) {
+			System.out.println(e);
+		}
+	 }
+	
 	private int getGridX(int x)
 	{
 		return convertX(0) + (x * this.gridAmplifier); 
@@ -256,147 +442,6 @@ public class Simulator extends JComponent{
 	}
 	
 	
-	/*
-	 * O método readReceivedMessage realiza o processamente da mensagem.
-	 * Por meio da interpretação da mensagem, é atualizado as variáveis do simulador para sua exibição gráfica.
-	 * 
-	 * A mensagem recebida é do tipo String, onde cada argumento da mensagem é separado por ponto-e-vírgula (;).
-	 * O processamento da mensagem é feito da seguinte forma: 
-	 * A mensagem é separada e tranformada em um array de String, messageArray, 
-	 * onde a primeira posição identifica o tipo da mensagem, messageArray[0]. 
-	 * Para cada tipo de mensagem, uma atualização diferente é realizada. A identificação de cada mensagem é feito por meio de um switch().
-	 */
-	private void readReceivedMessage(String message) {
-		
-		String[] messageArray = message.split(";");
-		String switchMessage = messageArray[0];
-		
-		int x = 0,  y = 0;
-		String d;
-		
-		if( !(switchMessage.equals("clear") || switchMessage.equals("removeObstacleDamage")) ) {
-			x = Integer.parseInt( messageArray[1] );
-			y = Integer.parseInt( messageArray[2] );
-			this.environmentGrid.get( GridCell.getIndex(x, y) ).setIsVisible(true);
-		}
-		
-		switch(switchMessage) {
-			case	"clear": 
-				this.gridSize = Integer.parseInt( messageArray[1] );
-				this.ableToMove = true;
-				initGridInformation();
-				break;
-			case	"depot":
-				depot.setX( Integer.parseInt( messageArray[1] ) );
-				depot.setY( Integer.parseInt( messageArray[2] ) );
-				break;
-			case	"carLocation":
-				d = messageArray[3];
-				car.setX( x );
-				car.setY( y );
-				this.direction = d;
-				if(y < this.gridSize)
-					this.environmentGrid.get( GridCell.getIndex(x, y+1) ).setIsVisible(true);
-				if(y > 0)
-					this.environmentGrid.get( GridCell.getIndex(x, y-1) ).setIsVisible(true);
-				if(x < this.gridSize)
-					this.environmentGrid.get( GridCell.getIndex(x+1, y) ).setIsVisible(true);
-				if(x > 0)
-					this.environmentGrid.get( GridCell.getIndex(x-1, y) ).setIsVisible(true);
-				break;
-			case	"obstacle":
-				this.environmentGrid.get( GridCell.getIndex(x, y) ).setHasObstacle(true);
-				break;
-			case	"pickUp":
-				/*
-				 * Atualiza o ponto de pegada do passeiro.
-				 */
-				this.pickUp.setX( x );
-				this.pickUp.setY( y ); 
-				this.canPickUp = true;
-				
-				break;
-			case	"dropOff":
-				/*
-				 * Atualiza o ponto de destino do passeiro.
-				 */
-				this.dropOff.setX( x );
-				this.dropOff.setY( y ); 
-				this.canDropOff = true;
-				break;
-				
-			case "obstacleDamage":
-				/*
-				 * Com base nas coordenadas x e y informadas, a posição (x,y) do grid interno (environmentGrid) 
-				 * é atualizado com a informações sobre o nível de dado definido pelo ambiente do agente.
-				 * */ 
-				this.environmentGrid.get( GridCell.getIndex(x, y) ).setDamageLevel(messageArray[3]);
-				break;
-			case "removeObstacleDamage":
-				/*
-				 * Define o valor "none" para todas as coordenadas do do grid interno (environmentGrid). 
-				 * */ 
-				for (int X = 0; X <= this.gridSize; X++) {
-					for (int Y = 0; Y <= this.gridSize; Y++) {
-						this.environmentGrid.get( GridCell.getIndex(X, Y)).setDamageLevel("none");
-					}
-				}
-				break;
-			case "refuseRide":
-				/*
-				 * Quando o agente recusa terminar uma corrida.
-				 * Caso pick_up: Ambas coordenadas de pickUp e dropOff exibem um 'X' indicando que não é possível chegar naquela localidade 
-				 * 				(são atualizas as variáveis canPickUp e canDropOff).
-				 * Caso drop_off: A coordenada dropOff exibe um 'X' indicando que não é possível chegar naquela localidade
-				 * 				(é atualizada a variável canDropOff).
-				 * Caso car_unavailable: Todas as coordendas do grid são preenchidas com a cor vermelha. 
-				 * 				
-				 */
-				String type = messageArray[3];
-				switch(type) {
-				case "pick_up":
-					this.canPickUp = false;
-					this.canDropOff = false;
-					break;
-				case "drop_off":
-					this.canDropOff = false;
-					break;
-				case "car_unavailable":
-					this.ableToMove = false;
-					break;
-				}
-				break;
-			default:
-				System.out.println("Erro");
-				System.out.println(messageArray[0]);
-		}
-		
-		repaint();
-	}
-	
-	
-	public static void main(String args[]){
-		
-		Simulator sim = new Simulator();
-		
-		try {
-
-			server = new DatagramSocket(9999);
-			byte[] receive = new byte[1024];
-			
-			while(true)
-			{
-				DatagramPacket receivePacket = new DatagramPacket(receive, receive.length); // Pacote Recebido
-				server.receive(receivePacket);
-				
-				String sentence = new String( receivePacket.getData() );
-				sim.readReceivedMessage(sentence);
-			}
-		}
-		catch (Exception e) {
-			System.out.println(e);
-		}
-	 }
 }
 
 
