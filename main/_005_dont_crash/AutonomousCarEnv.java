@@ -72,7 +72,7 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 		 
 		// Passengers
 		this.passengers = new ArrayList<Passenger>();
-		this.nPassengers = 0;
+		this.nPassengers = 4;  // set the number of passengers
 		this.currentPassenger = new Passenger(new Coordinate(1, 1), new Coordinate(2, 1));  // (Used by simulation)
 		 
 		 // Helpers
@@ -105,7 +105,7 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 		this.damageLevel.addChoice(0.34, "low");
 		 
 		// Simulator
-		this.simulate = false;
+		this.simulate = true; // true used to run simulator; false used to run AJPF 
 		this.waitTimeDefault = 750; 
 		this.waitTimeLocation = 300; 
 
