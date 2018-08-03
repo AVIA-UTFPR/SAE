@@ -45,14 +45,14 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 	private Choice<String> damageLevel; // Determines the chance of obstacle damage level classification 
 	
 	// Simulator
-	//Class client - Class responsible to create a conexion environment-simulator. Uses static methods
+	//Class client - Class responsible to create a connexion environment-simulator. Uses static methods
 	private boolean simulate; // Determines if the environment should send message to the simulator
 	private int waitTimeDefault; // Wait time between messages
 	private int waitTimeLocation; // Wait time to send first message
 
 	/*
 	 * Note:
-	 * In order to be able to visualize agent's movements correctly, wait times (waitTimeDefault and waitTimeLocation) are used.
+	 * In order to be able to visualise agent's movements correctly, wait times (waitTimeDefault and waitTimeLocation) are used.
 	 * Any part of the code 'if(simulate)' verifies if the simulator is active to send messages to the simulation.
 	 */
 	
@@ -79,7 +79,7 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 		this.obstacleDamageRelated = new ArrayList<>();
 		
 		/*
-		 * Initialize collisionChance, variable responsible to determine if in a given situation the obstacle avoidance can occur.
+		 * Initialise collisionChance, variable responsible to determine if in a given situation the obstacle avoidance can occur.
 		 * As precondition, the agent must be surrounded by three static obstacles.
 		 * In this scenario, there is a 10% chance that the agent won't be able to avoid a possible collision.
 		 */
@@ -89,7 +89,7 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 		this.collisionChance.addChoice(0.1, true);  // Won't avoid
 		
 		/*
-		 *  Initialize damageLevel, variable responsible to determine the damage caused by each obstacle in unavoidable collision situation.
+		 *  Initialise damageLevel, variable responsible to determine the damage caused by each obstacle in unavoidable collision situation.
 		 *  Levels:
 		 *  1 - Low.
 		 *  2 - Moderate.
