@@ -72,7 +72,7 @@ public class AutonomousCarEnv extends DefaultEnvironmentwRandomness {
 		 
 		// Passengers
 		this.passengers = new ArrayList<Passenger>();
-		this.nPassengers = 4;  // set the number of passengers
+		this.nPassengers = 3;  // set the number of passengers
 		this.currentPassenger = new Passenger(new Coordinate(1, 1), new Coordinate(2, 1));  // (Used by simulation)
 		 
 		 // Helpers
