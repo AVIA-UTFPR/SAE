@@ -16,7 +16,7 @@ import ail.syntax.VarTerm;
 import ail.util.AILexception;
 import util.Passenger;
 
-public class AutonomousCarEnv extends DefaultEnvironmentwRandomness{
+public class AVDecision_makingEnv extends DefaultEnvironmentwRandomness{
 
 
 	// Initial position of the car

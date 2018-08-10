@@ -1,0 +1,7 @@
+mas.file = /main/decision_making/av_decision_making.gwen
+mas.builder = gwendolen.GwendolenMASBuilder
+
+env = decision_making.AVDecision_makingEnv
+
+log.warning = ail.mas.DefaultEnvironment
+//log.info = ail.mas.DefaultEnvironment
